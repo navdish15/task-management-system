@@ -1,0 +1,76 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+/* Full screen wrapper */
+.login-page {
+  min-height: 100vh; /* important */
+  width: 100%;
+  background-image: url("/log.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Login Box */
+.login-container {
+  max-width: 420px;
+  padding: 50px;
+  background-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0px 15px 40px rgba(0, 0, 0, 0.15);
+  border-radius: 15px;
+  position: absolute;
+  right: 5%;
+  top: 50%;
+  transform: translateY(-50%);
+}
+/* Header */
+.login-header {
+  margin-bottom: 30px;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* Form spacing */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-control {
+  padding: 10px;
+  border-radius: 8px;
+}
+
+/* Button */
+.btn-primary {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  background: linear-gradient(to right, #3b82f6, #2563eb);
+  border: none;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+/* Footer */
+.footer {
+  position: fixed; /* changed */
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  padding: 10px 0;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(4px);
+  font-size: 0.9rem;
+  color: #222;
+}

@@ -1,0 +1,299 @@
+/* ================= CONTAINER ================= */
+
+.mytasks-container {
+  padding: 30px;
+  background: linear-gradient(to bottom, #f8fafc, #eef2f7);
+  min-height: 100vh;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: #1e293b;
+}
+
+/* ================= SUMMARY ================= */
+
+.task-summary {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+}
+
+/* ================= CHIP (UNIFORM SIZE) ================= */
+
+.chip {
+  height: 36px;
+  min-width: 140px;
+  padding: 0 16px;
+
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #334155;
+
+  transition: all 0.2s ease;
+}
+
+.chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* VARIANTS */
+
+.chip.total {
+  background: #f8fafc;
+  color: #475569;
+}
+
+.chip.pending {
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #fed7aa;
+}
+
+.chip.progress {
+  background: linear-gradient(135deg, #dbeafe, #eff6ff);
+  color: #1e40af;
+  border-color: #93c5fd;
+  font-weight: 600;
+}
+
+.chip.completed {
+  background: #ecfdf5;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+/* ================= CARD ================= */
+
+.jira-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 30px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 18px;
+  border: 1px solid #e5e7eb;
+  border-left: 5px solid transparent;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.jira-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+}
+
+/* priority strip */
+
+.jira-card.high {
+  border-left-color: #ef4444;
+}
+
+.jira-card.medium {
+  border-left-color: #f59e0b;
+}
+
+.jira-card.low {
+  border-left-color: #10b981;
+}
+
+/* divider */
+
+.jira-card::after {
+  content: "";
+  position: absolute;
+  right: 300px;
+  top: 20%;
+  height: 60%;
+  width: 1px;
+  background: #e5e7eb;
+}
+
+/* ================= LEFT ================= */
+
+.jira-left {
+  flex: 2;
+}
+
+.task-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.task-desc {
+  font-size: 13px;
+  color: #64748b;
+  margin: 8px 0 12px;
+  line-height: 1.5;
+}
+
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ================= PRIORITY ================= */
+
+.priority-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.priority-badge.high {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.priority-badge.medium {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.priority-badge.low {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+/* ================= STATUS BADGE ================= */
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.status-badge.pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.status-badge.in-progress {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.status-badge.completed {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+/* ================= RIGHT ================= */
+
+.jira-right {
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ================= STATUS SELECT ================= */
+
+.status-select {
+  padding: 8px;
+  border-radius: 20px;
+  border: none;
+  background: #f1f5f9;
+  font-size: 12px;
+  text-align: center;
+  cursor: pointer;
+}
+
+/* ================= LINKS ================= */
+
+.download-link,
+.submitted-link {
+  font-size: 13px;
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.download-link:hover,
+.submitted-link:hover {
+  text-decoration: underline;
+}
+
+.no-file {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* ================= SUBMIT ================= */
+
+.submit-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.submit-box textarea {
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  font-size: 12px;
+  height: 70px;
+  background: #f9fafb;
+  transition: 0.2s;
+}
+
+.submit-box textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #ffffff;
+}
+
+/* file */
+
+.submit-box input {
+  background: #f3f4f6;
+  padding: 6px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+/* ================= BUTTON ================= */
+
+.submit-btn {
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.submit-btn:hover {
+  transform: scale(1.02);
+}
+
+/* ================= EMPTY ================= */
+
+.no-data {
+  text-align: center;
+  margin-top: 50px;
+  color: #94a3b8;
+  font-size: 14px;
+}

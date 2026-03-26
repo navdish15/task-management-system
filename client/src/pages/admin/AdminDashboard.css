@@ -1,0 +1,289 @@
+/* ================= DASHBOARD CONTAINER ================= */
+
+.dashboard-container {
+  padding: 30px;
+  background: #f4f6f9;
+  min-height: 100vh;
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* ================= TITLE ================= */
+
+.dashboard-container h2 {
+  margin-bottom: 25px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+/* ================= CARD GRID ================= */
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+}
+
+/* ================= CARD ================= */
+
+.card {
+  width: 280px;
+  padding: 25px;
+  border-radius: 18px;
+  color: #fff;
+  text-align: center;
+  font-weight: 600;
+  font-size: 18px;
+  cursor: pointer;
+
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+}
+
+/* ================= CARD TEXT ================= */
+
+.card h3 {
+  font-size: 18px;
+  margin-bottom: 10px;
+  opacity: 0.9;
+}
+
+.card p {
+  font-size: 32px;
+  font-weight: bold;
+  margin: 0;
+}
+
+/* ================= COLORS ================= */
+
+.card.green {
+  background: linear-gradient(135deg, #28a745, #1e7e34);
+}
+.card.pink {
+  background: linear-gradient(135deg, #ff4e50, #c0392b);
+}
+.card.yellow {
+  background: linear-gradient(135deg, #f6c23e, #d4a017);
+}
+.card.teal {
+  background: linear-gradient(135deg, #20c997, #117a65);
+}
+.card.blue {
+  background: linear-gradient(135deg, #4e73df, #224abe);
+}
+.card.orange {
+  background: linear-gradient(135deg, #fd7e14, #c05600);
+}
+
+/* ================= CHART SECTION ================= */
+
+.chart-container {
+  display: flex;
+  gap: 40px;
+  margin-top: 40px;
+  margin-bottom: 40px;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.chart-box {
+  flex: 1;
+  max-width: 500px;
+  height: 350px;
+  background: transparent;
+}
+
+.chart-box h3 {
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
+
+/* ================= SECTION CARDS ================= */
+
+.section-card {
+  background: #fff;
+  padding: 20px;
+  margin-top: 50px;
+  border-radius: 15px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+.section-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  margin-bottom: 15px;
+  color: #2c3e50;
+}
+
+/* ================= OVERDUE CARD ================= */
+
+.overdue-card {
+  border-left: 6px solid #ff4d4f;
+}
+
+/* ================= TASK LIST ================= */
+
+.task-list {
+  list-style: none;
+  padding: 0;
+}
+
+.task-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  transition: all 0.25s ease;
+}
+
+.task-list li:hover {
+  transform: translateX(6px);
+  background: #fff5f5;
+}
+
+.task-list strong {
+  flex: 2;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.task-list span {
+  flex: 1;
+  color: #666;
+}
+
+.task-list small {
+  flex: 1;
+  text-align: right;
+  color: #ff4d4f;
+  font-weight: 600;
+}
+
+/* ================= EMPTY TEXT ================= */
+
+.empty {
+  color: #888;
+  padding: 10px;
+}
+
+/* ================= BADGES ================= */
+
+.badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* Efficiency colors (matches your JS logic) */
+.badge.green {
+  background: #e6f9f0;
+  color: #00a86b;
+}
+
+.badge.orange {
+  background: #fff4e5;
+  color: #ff9800;
+}
+
+.badge.red {
+  background: #ffeaea;
+  color: #ff4d4f;
+}
+
+/* ================= TOP PERFORMER ================= */
+
+.top-performer {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.avatar {
+  background: linear-gradient(135deg, gold, orange);
+  padding: 15px;
+  border-radius: 50%;
+  font-size: 22px;
+}
+
+/* ================= TABLE (UPGRADED 🔥) ================= */
+
+table {
+  width: 100%;
+  margin-top: 20px;
+  border-collapse: separate; /* 🔥 key change */
+  border-spacing: 0 10px; /* row spacing */
+  background: transparent;
+}
+
+/* HEADER */
+th {
+  background: #2c3e50;
+  color: #fff;
+  padding: 14px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Rounded header */
+th:first-child {
+  border-top-left-radius: 12px;
+}
+th:last-child {
+  border-top-right-radius: 12px;
+}
+
+/* ROW STYLE */
+td {
+  background: #ffffff;
+  padding: 14px;
+  text-align: center;
+  border: none;
+}
+
+/* Rounded rows */
+tr td:first-child {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+tr td:last-child {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+/* Hover effect */
+tr:hover td {
+  background: #f4f8ff;
+  transform: scale(1.01);
+  transition: 0.2s ease;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 768px) {
+  .card {
+    width: 100%;
+  }
+
+  .chart-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .chart-box {
+    width: 100%;
+    max-width: 100%;
+    height: 300px;
+  }
+}

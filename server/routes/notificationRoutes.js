@@ -1,0 +1,44 @@
+const express = require("express");
+const router = express.Router();
+const { pool: db } = require("../config/db");
+const verifyToken = require("../middleware/verifyToken");
+
+// ================= GET USER NOTIFICATIONS =================
+router.get("/", verifyToken, (req, res) => {
+  const userId = req.user.id;
+
+  db.query(
+    "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC",
+    [userId],
+    (err, results) => {
+      if (err) return res.status(500).json({ message: "Server error" });
+      res.json(results);
+    },
+  );
+});
+
+// ================= MARK ONE AS READ =================
+router.put("/read/:id", verifyToken, (req, res) => {
+  const { id } = req.params;
+
+  db.query("UPDATE notifications SET is_read = 1 WHERE id = ?", [id], (err) => {
+    if (err) return res.status(500).json({ message: "Server error" });
+    res.json({ message: "Notification marked as read" });
+  });
+});
+
+// ================= MARK ALL AS READ =================
+router.put("/read-all", verifyToken, (req, res) => {
+  const userId = req.user.id;
+
+  db.query(
+    "UPDATE notifications SET is_read = 1 WHERE user_id = ?",
+    [userId],
+    (err) => {
+      if (err) return res.status(500).json({ message: "Server error" });
+      res.json({ message: "All notifications marked as read" });
+    },
+  );
+});
+
+module.exports = router;
