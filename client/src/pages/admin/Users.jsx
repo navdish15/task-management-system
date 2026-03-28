@@ -10,11 +10,15 @@ function Users() {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
 
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editUserId, setEditUserId] = useState(null);
+
   const [formData, setFormData] = useState({
     username: "",
     email: "",
     password: "",
     role: "employee",
+    department: "",
     status: "active",
   });
 
@@ -27,74 +31,110 @@ function Users() {
     api
       .get(`/admin/users?search=${search}`)
       .then((res) => setUsers(res.data))
-      .catch((err) => console.error(err));
+      .catch(console.error);
   }, [search]);
 
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
 
-  /* ================= SOCKET ONLINE LISTENER ================= */
+  /* ================= SOCKET ================= */
 
   useEffect(() => {
     socket.on("updateOnlineUsers", (users) => {
       setOnlineUsers(users);
     });
 
-    return () => {
-      socket.off("updateOnlineUsers");
-    };
+    return () => socket.off("updateOnlineUsers");
   }, []);
 
-  /* ================= DELETE USER ================= */
+  /* ================= DELETE ================= */
 
   const deleteUser = (id) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
-      api
-        .delete(`/admin/users/${id}`)
-        .then(() => fetchUsers())
-        .catch((err) => console.error(err));
+    if (window.confirm("Delete this user?")) {
+      api.delete(`/admin/users/${id}`).then(fetchUsers).catch(console.error);
     }
   };
 
-  /* ================= TOGGLE STATUS ================= */
+  /* ================= STATUS ================= */
 
   const toggleStatus = (id) => {
-    api
-      .put(`/admin/users/toggle/${id}`)
-      .then(() => fetchUsers())
-      .catch((err) => console.error(err));
+    api.put(`/admin/users/toggle/${id}`).then(fetchUsers).catch(console.error);
   };
 
-  /* ================= CREATE USER ================= */
+  /* ================= EDIT ================= */
 
-  const createUser = () => {
-    if (!formData.username || !formData.password) {
-      alert("Username and Password are required!");
+  const handleEdit = (user) => {
+    setIsEditMode(true);
+    setEditUserId(user.id);
+    setShowModal(true);
+
+    setFormData({
+      username: user.username,
+      email: user.email,
+      password: "",
+      role: user.role,
+      department: user.department || "",
+      status: user.status,
+    });
+  };
+
+  /* ================= SAVE ================= */
+
+  const saveUser = () => {
+    if (!formData.username) {
+      alert("Username is required!");
       return;
     }
 
-    api
-      .post("/admin/users", formData)
-      .then(() => {
-        setShowModal(false);
-        setFormData({
-          username: "",
-          email: "",
-          password: "",
-          role: "employee",
-          status: "active",
-        });
-        fetchUsers();
-      })
-      .catch((err) => console.error(err));
+    if (isEditMode) {
+      api
+        .put(`/admin/users/${editUserId}`, formData)
+        .then(() => {
+          resetForm();
+          fetchUsers();
+        })
+        .catch(console.error);
+    } else {
+      if (!formData.password) {
+        alert("Password is required!");
+        return;
+      }
+
+      api
+        .post("/admin/users", formData)
+        .then(() => {
+          resetForm();
+          fetchUsers();
+        })
+        .catch(console.error);
+    }
+  };
+
+  /* ================= RESET ================= */
+
+  const resetForm = () => {
+    setShowModal(false);
+    setIsEditMode(false);
+    setEditUserId(null);
+
+    setFormData({
+      username: "",
+      email: "",
+      password: "",
+      role: "employee",
+      department: "",
+      status: "active",
+    });
   };
 
   /* ================= PAGINATION ================= */
 
   const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
+  const currentUsers = users.slice(
+    indexOfLastUser - usersPerPage,
+    indexOfLastUser,
+  );
   const totalPages = Math.ceil(users.length / usersPerPage);
 
   return (
@@ -108,6 +148,7 @@ function Users() {
           </div>
 
           <div className="header-actions">
+            {/* ✅ FIXED SEARCH UI */}
             <div className="search-inline">
               <input
                 type="text"
@@ -115,6 +156,7 @@ function Users() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
+
               <button
                 onClick={() => {
                   setCurrentPage(1);
@@ -140,8 +182,9 @@ function Users() {
                 <th>Username</th>
                 <th>Email</th>
                 <th>Role</th>
+                <th>Department</th>
                 <th>Status</th>
-                <th style={{ textAlign: "center" }}>Actions</th>
+                <th>Actions</th>
               </tr>
             </thead>
 
@@ -152,21 +195,12 @@ function Users() {
 
                   <td>
                     {user.username}
-                    {onlineUsers.includes(user.username) && (
-                      <span
-                        style={{
-                          color: "green",
-                          marginLeft: "8px",
-                          fontSize: "14px",
-                        }}
-                      >
-                        ●
-                      </span>
-                    )}
+                    {onlineUsers.includes(user.username) && <span> ●</span>}
                   </td>
 
                   <td>{user.email}</td>
                   <td>{user.role}</td>
+                  <td>{user.department || "-"}</td>
 
                   <td>
                     <span
@@ -181,6 +215,13 @@ function Users() {
                   </td>
 
                   <td className="action-buttons">
+                    <button
+                      className="btn-edit"
+                      onClick={() => handleEdit(user)}
+                    >
+                      Edit
+                    </button>
+
                     <button
                       className="btn-delete"
                       onClick={() => deleteUser(user.id)}
@@ -203,15 +244,15 @@ function Users() {
 
         {/* PAGINATION */}
         <div className="pagination">
-          {[...Array(totalPages)].map((_, index) => (
+          {[...Array(totalPages)].map((_, i) => (
             <button
-              key={index}
+              key={i}
               className={
-                currentPage === index + 1 ? "page-btn active-page" : "page-btn"
+                currentPage === i + 1 ? "page-btn active-page" : "page-btn"
               }
-              onClick={() => setCurrentPage(index + 1)}
+              onClick={() => setCurrentPage(i + 1)}
             >
-              {index + 1}
+              {i + 1}
             </button>
           ))}
         </div>
@@ -221,7 +262,7 @@ function Users() {
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-box">
-            <h3>Create New User</h3>
+            <h3>{isEditMode ? "Edit User" : "Create New User"}</h3>
 
             <input
               type="text"
@@ -241,14 +282,16 @@ function Users() {
               }
             />
 
-            <input
-              type="password"
-              placeholder="Password"
-              value={formData.password}
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
-              }
-            />
+            {!isEditMode && (
+              <input
+                type="password"
+                placeholder="Password"
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
+              />
+            )}
 
             <select
               value={formData.role}
@@ -258,6 +301,19 @@ function Users() {
             >
               <option value="employee">Employee</option>
               <option value="admin">Admin</option>
+            </select>
+
+            <select
+              value={formData.department}
+              onChange={(e) =>
+                setFormData({ ...formData, department: e.target.value })
+              }
+            >
+              <option value="">Select Department</option>
+              <option value="HR">HR</option>
+              <option value="Software">Software</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Sales">Sales</option>
             </select>
 
             <select
@@ -271,15 +327,12 @@ function Users() {
             </select>
 
             <div className="modal-buttons">
-              <button
-                className="btn-cancel"
-                onClick={() => setShowModal(false)}
-              >
+              <button className="btn-cancel" onClick={resetForm}>
                 Cancel
               </button>
 
-              <button className="btn-save" onClick={createUser}>
-                Save
+              <button className="btn-save" onClick={saveUser}>
+                {isEditMode ? "Update" : "Save"}
               </button>
             </div>
           </div>

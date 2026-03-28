@@ -45,7 +45,7 @@ router.get("/dashboard", verifyToken, authorizeRoles("admin"), (req, res) => {
 
 router.get("/users", verifyToken, authorizeRoles("admin"), (req, res) => {
   const search = req.query.search || "";
-  let sql = "SELECT id, username, email, role, status FROM users";
+  let sql = "SELECT id, username, email, role, department, status FROM users";
 
   if (search) {
     sql += " WHERE username LIKE ? OR email LIKE ?";
@@ -59,17 +59,41 @@ router.get("/users", verifyToken, authorizeRoles("admin"), (req, res) => {
 
 /* CREATE USER */
 router.post("/users", verifyToken, authorizeRoles("admin"), (req, res) => {
-  const { username, email, password, role, status } = req.body;
+  const { username, email, password, role, department, status } = req.body;
 
   const sql =
-    "INSERT INTO users (username, email, password, role, status) VALUES (?, ?, ?, ?, ?)";
+    "INSERT INTO users (username, email, password, role, department, status) VALUES (?, ?, ?, ?, ?, ?)";
 
-  db.query(sql, [username, email, password, role, status], (err) => {
+  db.query(
+    sql,
+    [username, email, password, role, department, status],
+    (err) => {
+      if (err) return res.status(500).json(err);
+
+      logAction(`Created user ${username}`, req.user.username, req.user.role);
+
+      res.json({ message: "User created successfully" });
+    },
+  );
+});
+
+/* 🔥 UPDATE USER (NEW FEATURE) */
+router.put("/users/:id", verifyToken, authorizeRoles("admin"), (req, res) => {
+  const { username, email, role, department, status } = req.body;
+  const userId = req.params.id;
+
+  const sql = `
+      UPDATE users 
+      SET username=?, email=?, role=?, department=?, status=? 
+      WHERE id=?
+    `;
+
+  db.query(sql, [username, email, role, department, status, userId], (err) => {
     if (err) return res.status(500).json(err);
 
-    logAction(`Created user ${username}`, req.user.username, req.user.role);
+    logAction(`Updated user ID ${userId}`, req.user.username, req.user.role);
 
-    res.json({ message: "User created successfully" });
+    res.json({ message: "User updated successfully" });
   });
 });
 
@@ -151,10 +175,9 @@ router.get("/audit-logs", verifyToken, authorizeRoles("admin"), (req, res) => {
   );
 });
 
-/* ================= ANALYTICS (FINAL + AUTO SYNC) ================= */
+/* ================= ANALYTICS ================= */
 
 router.get("/analytics", verifyToken, authorizeRoles("admin"), (req, res) => {
-  /* 🔥 AUTO SYNC PROJECT STATUS */
   const syncProjectQuery = `
     UPDATE projects p
     SET status = (
@@ -171,8 +194,6 @@ router.get("/analytics", verifyToken, authorizeRoles("admin"), (req, res) => {
 
   db.query(syncProjectQuery, (syncErr) => {
     if (syncErr) console.error("Sync error:", syncErr);
-
-    /* ================= EXISTING ANALYTICS ================= */
 
     const statusQuery = `
       SELECT status, COUNT(*) as count 
@@ -256,7 +277,6 @@ router.get("/analytics", verifyToken, authorizeRoles("admin"), (req, res) => {
                     monthlyData: monthlyResult,
                     upcomingTasks: upcomingResult,
                     topEmployee: topResult[0] || null,
-
                     overdueTasks: overdueResult,
                     projectStats: projectStatsResult[0] || {},
                     employeePerformance: empResult,
