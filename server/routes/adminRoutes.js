@@ -172,7 +172,6 @@ router.get("/analytics", verifyToken, authorizeRoles("admin"), (req, res) => {
       GROUP BY status
     `;
 
-  /* 🔥 ONLY THIS PART CHANGED */
   const monthlyQuery = `
       SELECT 
         DATE_FORMAT(assigned_at, '%Y-%m') as month,
@@ -266,6 +265,20 @@ router.get("/analytics", verifyToken, authorizeRoles("admin"), (req, res) => {
       });
     });
   });
+});
+
+/* ================= AUDIT LOGS (🔥 ADDED) ================= */
+
+router.get("/audit-logs", verifyToken, authorizeRoles("admin"), (req, res) => {
+  db.query(
+    `SELECT id, action, performed_by, role, created_at 
+     FROM audit_logs 
+     ORDER BY created_at DESC`,
+    (err, results) => {
+      if (err) return res.status(500).json({ message: "Error fetching logs" });
+      res.json(results);
+    },
+  );
 });
 
 module.exports = router;
