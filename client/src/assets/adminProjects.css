@@ -548,3 +548,41 @@
   background: #e0e7ff;
   color: #4338ca;
 }
+/* FILTER CONTAINER */
+.filter-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* DROPDOWN STYLE */
+.filter-row select {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #dcdcdc;
+  background-color: #fff;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 160px;
+}
+
+/* HOVER EFFECT */
+.filter-row select:hover {
+  border-color: #4a90e2;
+}
+
+/* FOCUS EFFECT */
+.filter-row select:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+/* LABEL TITLE */
+.members-section h4 {
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+}

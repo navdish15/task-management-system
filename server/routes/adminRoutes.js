@@ -77,7 +77,7 @@ router.post("/users", verifyToken, authorizeRoles("admin"), (req, res) => {
   );
 });
 
-/* 🔥 UPDATE USER (NEW FEATURE) */
+/* UPDATE USER */
 router.put("/users/:id", verifyToken, authorizeRoles("admin"), (req, res) => {
   const { username, email, role, department, status } = req.body;
   const userId = req.params.id;
@@ -163,54 +163,32 @@ router.get("/employees", verifyToken, authorizeRoles("admin"), (req, res) => {
   );
 });
 
-/* ================= AUDIT LOG FETCH ================= */
-
-router.get("/audit-logs", verifyToken, authorizeRoles("admin"), (req, res) => {
-  db.query(
-    "SELECT * FROM audit_logs ORDER BY created_at DESC",
-    (err, result) => {
-      if (err) return res.status(500).json(err);
-      res.json(result);
-    },
-  );
-});
-
 /* ================= ANALYTICS ================= */
 
 router.get("/analytics", verifyToken, authorizeRoles("admin"), (req, res) => {
-  const syncProjectQuery = `
-    UPDATE projects p
-    SET status = (
-      SELECT 
-        CASE 
-          WHEN COUNT(*) = SUM(CASE WHEN t.status = 'Completed' THEN 1 ELSE 0 END)
-          THEN 'Completed'
-          ELSE 'Pending'
-        END
-      FROM tasks t
-      WHERE t.project_id = p.id
-    )
-  `;
-
-  db.query(syncProjectQuery, (syncErr) => {
-    if (syncErr) console.error("Sync error:", syncErr);
-
-    const statusQuery = `
+  const statusQuery = `
       SELECT status, COUNT(*) as count 
       FROM tasks 
       GROUP BY status
     `;
 
-    const monthlyQuery = `
+  /* 🔥 ONLY THIS PART CHANGED */
+  const monthlyQuery = `
       SELECT 
         DATE_FORMAT(assigned_at, '%Y-%m') as month,
-        COUNT(*) as total
+        COUNT(*) as assigned,
+        SUM(
+          CASE 
+            WHEN status = 'Completed' OR status = 'Approved' 
+            THEN 1 ELSE 0 
+          END
+        ) as completed
       FROM tasks
       GROUP BY month
       ORDER BY month ASC
     `;
 
-    const upcomingQuery = `
+  const upcomingQuery = `
       SELECT task_name, employee_username, deadline
       FROM tasks
       WHERE deadline >= NOW()
@@ -218,7 +196,7 @@ router.get("/analytics", verifyToken, authorizeRoles("admin"), (req, res) => {
       LIMIT 5
     `;
 
-    const topEmployeeQuery = `
+  const topEmployeeQuery = `
       SELECT employee_username, COUNT(*) as completed
       FROM tasks
       WHERE status = 'Completed'
@@ -227,14 +205,14 @@ router.get("/analytics", verifyToken, authorizeRoles("admin"), (req, res) => {
       LIMIT 1
     `;
 
-    const overdueQuery = `
+  const overdueQuery = `
       SELECT task_name, employee_username, deadline
       FROM tasks
       WHERE deadline < NOW() AND status != 'Completed'
       ORDER BY deadline ASC
     `;
 
-    const projectStatsQuery = `
+  const projectStatsQuery = `
       SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed,
@@ -242,7 +220,7 @@ router.get("/analytics", verifyToken, authorizeRoles("admin"), (req, res) => {
       FROM projects
     `;
 
-    const employeePerformanceQuery = `
+  const employeePerformanceQuery = `
       SELECT 
         employee_username,
         COUNT(*) as assigned,
@@ -251,36 +229,35 @@ router.get("/analytics", verifyToken, authorizeRoles("admin"), (req, res) => {
       GROUP BY employee_username
     `;
 
-    db.query(statusQuery, (err1, statusResult) => {
-      if (err1) return res.status(500).json(err1);
+  db.query(statusQuery, (err1, statusResult) => {
+    if (err1) return res.status(500).json(err1);
 
-      db.query(monthlyQuery, (err2, monthlyResult) => {
-        if (err2) return res.status(500).json(err2);
+    db.query(monthlyQuery, (err2, monthlyResult) => {
+      if (err2) return res.status(500).json(err2);
 
-        db.query(upcomingQuery, (err3, upcomingResult) => {
-          if (err3) return res.status(500).json(err3);
+      db.query(upcomingQuery, (err3, upcomingResult) => {
+        if (err3) return res.status(500).json(err3);
 
-          db.query(topEmployeeQuery, (err4, topResult) => {
-            if (err4) return res.status(500).json(err4);
+        db.query(topEmployeeQuery, (err4, topResult) => {
+          if (err4) return res.status(500).json(err4);
 
-            db.query(overdueQuery, (err5, overdueResult) => {
-              if (err5) return res.status(500).json(err5);
+          db.query(overdueQuery, (err5, overdueResult) => {
+            if (err5) return res.status(500).json(err5);
 
-              db.query(projectStatsQuery, (err6, projectStatsResult) => {
-                if (err6) return res.status(500).json(err6);
+            db.query(projectStatsQuery, (err6, projectStatsResult) => {
+              if (err6) return res.status(500).json(err6);
 
-                db.query(employeePerformanceQuery, (err7, empResult) => {
-                  if (err7) return res.status(500).json(err7);
+              db.query(employeePerformanceQuery, (err7, empResult) => {
+                if (err7) return res.status(500).json(err7);
 
-                  res.json({
-                    statusData: statusResult,
-                    monthlyData: monthlyResult,
-                    upcomingTasks: upcomingResult,
-                    topEmployee: topResult[0] || null,
-                    overdueTasks: overdueResult,
-                    projectStats: projectStatsResult[0] || {},
-                    employeePerformance: empResult,
-                  });
+                res.json({
+                  statusData: statusResult,
+                  monthlyData: monthlyResult,
+                  upcomingTasks: upcomingResult,
+                  topEmployee: topResult[0] || null,
+                  overdueTasks: overdueResult,
+                  projectStats: projectStatsResult[0] || {},
+                  employeePerformance: empResult,
                 });
               });
             });

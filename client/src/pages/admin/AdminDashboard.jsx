@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import "./AdminDashboard.css";
 import AdminLayout from "../../components/AdminLayout";
-import { Doughnut, Bar } from "react-chartjs-2";
+import { Doughnut, Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   ArcElement,
@@ -11,6 +11,8 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
+  PointElement,
+  LineElement,
 } from "chart.js";
 import { useNavigate } from "react-router-dom";
 
@@ -21,6 +23,8 @@ ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
+  PointElement,
+  LineElement,
 );
 
 function AdminDashboard() {
@@ -86,16 +90,35 @@ function AdminDashboard() {
     ],
   };
 
-  /* ================= BAR CHART ================= */
+  /* ================= LINE CHART ================= */
+  const efficiencyData =
+    analytics?.monthlyData?.map((i) => {
+      const assigned = i.assigned || i.total || 0;
+      const completed = i.completed || 0;
+
+      if (assigned === 0) return 0;
+      return Math.round((completed / assigned) * 100);
+    }) || [];
+
   const monthlyChartData = {
     labels: analytics?.monthlyData?.map((i) => i.month) || [],
     datasets: [
       {
-        label: "Tasks Assigned",
-        data: analytics?.monthlyData?.map((i) => i.total) || [],
-        backgroundColor: "#4e73df",
-        borderRadius: 8,
-        barThickness: 40,
+        label: "Efficiency %",
+        data: efficiencyData,
+        borderColor: "#4e73df",
+        backgroundColor: "rgba(78,115,223,0.1)",
+        tension: 0, // 🔥 straight line (clear up/down)
+        fill: false,
+
+        pointRadius: 7,
+        pointHoverRadius: 9,
+
+        // 🔥 Color points based on trend
+        pointBackgroundColor: efficiencyData.map((val, i) => {
+          if (i === 0) return "#4e73df";
+          return val >= efficiencyData[i - 1] ? "#28a745" : "#dc3545";
+        }),
       },
     ],
   };
@@ -105,12 +128,10 @@ function AdminDashboard() {
     maintainAspectRatio: false,
 
     plugins: {
-      legend: {
-        display: true,
-        labels: {
-          font: {
-            size: 14,
-          },
+      legend: { display: true },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => `${ctx.raw}%`,
         },
       },
     },
@@ -118,14 +139,13 @@ function AdminDashboard() {
     scales: {
       y: {
         beginAtZero: true,
-        grid: {
-          color: "#eee",
-        },
+        max: 100,
       },
-      x: {
-        grid: {
-          display: false,
-        },
+    },
+
+    elements: {
+      line: {
+        borderWidth: 3,
       },
     },
   };
@@ -141,7 +161,7 @@ function AdminDashboard() {
       <div className="dashboard-container">
         <h2>🚀 Admin Analytics Dashboard</h2>
 
-        {/* ===== CARDS ===== */}
+        {/* CARDS */}
         <div className="cards">
           <div className="card green" onClick={() => navigate("/admin/tasks")}>
             <h3>Total Tasks</h3>
@@ -164,7 +184,7 @@ function AdminDashboard() {
           </div>
         </div>
 
-        {/* ===== PROJECT CARDS ===== */}
+        {/* PROJECT CARDS */}
         <div className="cards" style={{ marginTop: "20px" }}>
           <div className="card blue">
             <h3>Total Projects</h3>
@@ -182,7 +202,7 @@ function AdminDashboard() {
           </div>
         </div>
 
-        {/* ===== CHARTS ===== */}
+        {/* CHARTS */}
         <div className="chart-container">
           <div className="chart-box">
             <h3>Task Status Overview</h3>
@@ -190,15 +210,14 @@ function AdminDashboard() {
           </div>
 
           <div className="chart-box">
-            <h3>Monthly Task Assignment</h3>
-            <Bar data={monthlyChartData} options={chartOptions} />
+            <h3>Monthly Efficiency Trend (%)</h3>
+            <Line data={monthlyChartData} options={chartOptions} />
           </div>
         </div>
 
-        {/* ===== UPCOMING ===== */}
+        {/* UPCOMING */}
         <div className="section-card">
           <h3>📅 Upcoming Deadlines</h3>
-
           {analytics?.upcomingTasks?.length > 0 ? (
             <ul className="task-list">
               {analytics.upcomingTasks.map((task, i) => (
@@ -214,10 +233,9 @@ function AdminDashboard() {
           )}
         </div>
 
-        {/* ===== OVERDUE ===== */}
+        {/* OVERDUE */}
         <div className="section-card overdue-card">
           <h3>⚠️ Overdue Tasks</h3>
-
           {analytics?.overdueTasks?.length > 0 ? (
             <ul className="task-list">
               {analytics.overdueTasks.map((task, i) => (
@@ -233,27 +251,9 @@ function AdminDashboard() {
           )}
         </div>
 
-        {/* ===== TOP PERFORMER ===== */}
-        <div className="section-card">
-          <h3>🏆 Top Performer</h3>
-
-          {analytics?.topEmployee ? (
-            <div className="top-performer">
-              <div className="avatar">👑</div>
-              <div>
-                <h4>{analytics.topEmployee.employee_username}</h4>
-                <p>{analytics.topEmployee.completed} tasks completed</p>
-              </div>
-            </div>
-          ) : (
-            <p className="empty">No completed tasks yet</p>
-          )}
-        </div>
-
-        {/* ===== EMPLOYEE TABLE ===== */}
+        {/* EMPLOYEE TABLE */}
         <div className="section-card">
           <h3>👨‍💻 Employee Performance</h3>
-
           <table>
             <thead>
               <tr>

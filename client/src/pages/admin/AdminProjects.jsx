@@ -12,6 +12,9 @@ const AdminProjects = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
 
+  const [selectedDept, setSelectedDept] = useState("All");
+  const [selectedRole, setSelectedRole] = useState("All");
+
   const [formData, setFormData] = useState({
     project_name: "",
     description: "",
@@ -52,6 +55,15 @@ const AdminProjects = () => {
     const res = await api.get("/projects");
     setProjects(res.data);
   };
+
+  /* ================= FILTER LOGIC ================= */
+
+  const filteredUsers = users.filter((u) => {
+    return (
+      (selectedDept === "All" || u.department === selectedDept) &&
+      (selectedRole === "All" || u.role === selectedRole)
+    );
+  });
 
   /* ================= CREATE PROJECT ================= */
 
@@ -125,7 +137,7 @@ const AdminProjects = () => {
   const approveTask = async (id) => {
     await api.put(`/tasks/admin/approve/${id}`);
     handleViewProject(selectedProject);
-    refreshProjects(); // 🔥 IMPORTANT (sync list)
+    refreshProjects();
   };
 
   const rejectTask = async (id) => {
@@ -143,7 +155,6 @@ const AdminProjects = () => {
   return (
     <AdminLayout>
       <div className="admin-projects">
-        {/* HEADER */}
         <div className="projects-header">
           <h2>
             {viewMode
@@ -206,14 +217,41 @@ const AdminProjects = () => {
               />
             </div>
 
+            {/* 🔥 UPDATED MEMBERS SECTION */}
             <div className="members-section">
               <h4>Assign Employees</h4>
 
+              <div className="filter-row">
+                <select
+                  value={selectedDept}
+                  onChange={(e) => setSelectedDept(e.target.value)}
+                >
+                  <option value="All">All Departments</option>
+                  {[...new Set(users.map((u) => u.department))].map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                >
+                  <option value="All">All Roles</option>
+                  {[...new Set(users.map((u) => u.role))].map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <Select
                 isMulti
-                options={users.map((u) => ({
+                options={filteredUsers.map((u) => ({
                   value: u.id,
-                  label: u.username,
+                  label: `${u.username} (${u.department})`,
                 }))}
                 value={formData.members}
                 onChange={(selected) =>
@@ -224,7 +262,6 @@ const AdminProjects = () => {
 
             <div className="form-actions">
               <button onClick={handleCreateProject}>Create Project</button>
-
               <button
                 className="cancel-btn"
                 onClick={() => setShowCreate(false)}

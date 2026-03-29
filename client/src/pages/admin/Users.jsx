@@ -4,6 +4,9 @@ import socket from "../../services/socket";
 import AdminLayout from "../../components/AdminLayout";
 import "../../assets/adminUsers.css";
 
+/* 🔥 NEW: Centralized Departments */
+const DEPARTMENTS = ["HR", "Software", "Marketing", "Sales"];
+
 function Users() {
   const [users, setUsers] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
@@ -148,7 +151,6 @@ function Users() {
           </div>
 
           <div className="header-actions">
-            {/* ✅ FIXED SEARCH UI */}
             <div className="search-inline">
               <input
                 type="text"
@@ -199,17 +201,26 @@ function Users() {
                   </td>
 
                   <td>{user.email}</td>
-                  <td>{user.role}</td>
-                  <td>{user.department || "-"}</td>
 
+                  {/* 🔥 Role Badge */}
                   <td>
-                    <span
-                      className={
-                        user.status === "active"
-                          ? "status-active"
-                          : "status-inactive"
-                      }
-                    >
+                    <span className={`role-badge ${user.role}`}>
+                      {user.role}
+                    </span>
+                  </td>
+
+                  {/* 🔥 Department Badge */}
+                  <td>
+                    {user.department ? (
+                      <span className="dept-badge">{user.department}</span>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+
+                  {/* 🔥 Status Badge */}
+                  <td>
+                    <span className={`status-badge ${user.status}`}>
                       {user.status}
                     </span>
                   </td>
@@ -303,6 +314,7 @@ function Users() {
               <option value="admin">Admin</option>
             </select>
 
+            {/* 🔥 Dynamic Department */}
             <select
               value={formData.department}
               onChange={(e) =>
@@ -310,10 +322,11 @@ function Users() {
               }
             >
               <option value="">Select Department</option>
-              <option value="HR">HR</option>
-              <option value="Software">Software</option>
-              <option value="Marketing">Marketing</option>
-              <option value="Sales">Sales</option>
+              {DEPARTMENTS.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
+              ))}
             </select>
 
             <select

@@ -7,7 +7,7 @@ function Tasks() {
   const [employees, setEmployees] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
 
-  const [editingTask, setEditingTask] = useState(null); // ✅ ADDED
+  const [editingTask, setEditingTask] = useState(null);
 
   const user = JSON.parse(localStorage.getItem("user"));
   const token = user?.token;
@@ -272,23 +272,23 @@ function Tasks() {
                     <td>{task.task_name}</td>
                     <td>{task.employee_username}</td>
                     <td>{new Date(task.deadline).toLocaleString()}</td>
-                    <td>{task.priority}</td>
 
+                    {/* ✅ Priority Badge */}
                     <td>
                       <span
-                        style={{
-                          padding: "5px 10px",
-                          borderRadius: "20px",
-                          color: "white",
-                          background:
-                            task.status === "Pending"
-                              ? "orange"
-                              : task.status === "In Progress"
-                                ? "blue"
-                                : task.status === "Submitted"
-                                  ? "purple"
-                                  : "green",
-                        }}
+                        className={`priority-badge ${task.priority.toLowerCase()}`}
+                      >
+                        {task.priority}
+                      </span>
+                    </td>
+
+                    {/* ✅ Status Badge */}
+                    <td>
+                      <span
+                        className={`status-badge ${task.status.replace(
+                          " ",
+                          "-",
+                        )}`}
                       >
                         {task.status}
                       </span>
@@ -324,17 +324,9 @@ function Tasks() {
 
                     <td>{task.submission_text || "—"}</td>
 
-                    {/* ✅ UPDATED ACTIONS */}
                     <td>
                       <button
-                        style={{
-                          marginRight: "10px",
-                          background: "#4e73df",
-                          color: "white",
-                          padding: "5px 10px",
-                          border: "none",
-                          borderRadius: "5px",
-                        }}
+                        className="btn-edit"
                         onClick={() => setEditingTask(task)}
                       >
                         Edit
@@ -352,36 +344,21 @@ function Tasks() {
                       {task.status === "Submitted" ? (
                         <>
                           <button
-                            style={{
-                              marginRight: "10px",
-                              background: "green",
-                              color: "white",
-                              padding: "5px 10px",
-                              border: "none",
-                              borderRadius: "5px",
-                            }}
+                            className="btn-approve"
                             onClick={() => approveTask(task.id)}
                           >
                             Approve
                           </button>
 
                           <button
-                            style={{
-                              background: "red",
-                              color: "white",
-                              padding: "5px 10px",
-                              border: "none",
-                              borderRadius: "5px",
-                            }}
+                            className="btn-reject"
                             onClick={() => rejectTask(task.id)}
                           >
                             Reject
                           </button>
                         </>
                       ) : task.status === "Completed" ? (
-                        <span style={{ color: "green", fontWeight: "bold" }}>
-                          Approved ✅
-                        </span>
+                        <span className="approved-text">Approved ✅</span>
                       ) : (
                         "—"
                       )}
@@ -393,7 +370,7 @@ function Tasks() {
           </table>
         </div>
 
-        {/* ✅ EDIT MODAL */}
+        {/* EDIT MODAL SAME */}
         {editingTask && (
           <div className="modal">
             <div className="modal-content">

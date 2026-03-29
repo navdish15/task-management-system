@@ -325,3 +325,42 @@
     justify-content: center;
   }
 }
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.status-badge.active {
+  background: #d4f5e9;
+  color: #1a7f5a;
+}
+
+.status-badge.inactive {
+  background: #fde2e2;
+  color: #b42318;
+}
+
+.role-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.role-badge.admin {
+  background: #e0edff;
+  color: #1d4ed8;
+}
+
+.role-badge.employee {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.dept-badge {
+  background: #f3f4f6;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+}

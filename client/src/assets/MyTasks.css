@@ -297,3 +297,74 @@
   color: #94a3b8;
   font-size: 14px;
 }
+.priority-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.priority-badge.low {
+  background: #e2f0ff;
+  color: #1d4ed8;
+}
+
+.priority-badge.medium {
+  background: #fff4d6;
+  color: #b45309;
+}
+
+.priority-badge.high {
+  background: #fde2e2;
+  color: #b42318;
+}
+
+.status-badge {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: white;
+}
+
+.status-badge.Pending {
+  background: orange;
+}
+
+.status-badge.In-Progress {
+  background: #2563eb;
+}
+
+.status-badge.Submitted {
+  background: purple;
+}
+
+.status-badge.Completed {
+  background: green;
+}
+
+.btn-edit {
+  background: #4e73df;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  margin-right: 8px;
+}
+
+.btn-approve {
+  background: green;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  margin-right: 8px;
+}
+
+.btn-reject {
+  background: red;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+}
+
+.approved-text {
+  color: green;
+  font-weight: bold;
+}
