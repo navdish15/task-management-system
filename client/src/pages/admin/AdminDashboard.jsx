@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import "./AdminDashboard.css";
 import AdminLayout from "../../components/AdminLayout";
@@ -31,43 +31,99 @@ function AdminDashboard() {
   const [dashboard, setDashboard] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const navigate = useNavigate();
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  let user = null;
+  try {
+    user = JSON.parse(localStorage.getItem("user"));
+  } catch {
+    user = null;
+  }
+
   const token = user?.token;
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      navigate("/login");
+      return;
+    }
 
     async function loadData() {
       try {
-        const dashboardRes = await axios.get(
-          "http://localhost:5000/api/admin/dashboard",
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-
-        const analyticsRes = await axios.get(
-          "http://localhost:5000/api/admin/analytics",
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
+        const [dashboardRes, analyticsRes] = await Promise.all([
+          axios.get("http://localhost:5000/api/admin/dashboard", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get("http://localhost:5000/api/admin/analytics", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
         setDashboard(dashboardRes.data);
         setAnalytics(analyticsRes.data);
       } catch (err) {
         console.error(err);
+        setError("Failed to load dashboard");
       } finally {
         setLoading(false);
       }
     }
 
     loadData();
-  }, [token]);
+  }, [token, navigate]);
+
+  /* ================= MEMO FIX START ================= */
+
+  const efficiencyData = useMemo(() => {
+    return (
+      analytics?.monthlyData?.map((i) => {
+        const assigned = i.assigned || i.total || 0;
+        const completed = i.completed || 0;
+        if (assigned === 0) return 0;
+        return Math.round((completed / assigned) * 100);
+      }) || []
+    );
+  }, [analytics]);
+
+  const monthlyChartData = useMemo(
+    () => ({
+      labels: analytics?.monthlyData?.map((i) => i.month) || [],
+      datasets: [
+        {
+          label: "Efficiency %",
+          data: efficiencyData,
+          borderColor: "#4e73df",
+          backgroundColor: "rgba(78,115,223,0.1)",
+          tension: 0,
+          fill: false,
+          pointRadius: 7,
+          pointHoverRadius: 9,
+          pointBackgroundColor: efficiencyData.map((val, i) => {
+            if (i === 0) return "#4e73df";
+            return val >= efficiencyData[i - 1] ? "#28a745" : "#dc3545";
+          }),
+        },
+      ],
+    }),
+    [analytics, efficiencyData],
+  );
+
+  /* ================= MEMO FIX END ================= */
 
   if (loading) {
     return (
       <AdminLayout>
         <p style={{ padding: "20px" }}>Loading dashboard...</p>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <p style={{ padding: "20px", color: "red" }}>{error}</p>
       </AdminLayout>
     );
   }
@@ -78,7 +134,6 @@ function AdminDashboard() {
     active: 0,
   };
 
-  /* ================= DOUGHNUT ================= */
   const statusChartData = {
     labels: analytics?.statusData?.map((i) => i.status) || [],
     datasets: [
@@ -90,43 +145,9 @@ function AdminDashboard() {
     ],
   };
 
-  /* ================= LINE CHART ================= */
-  const efficiencyData =
-    analytics?.monthlyData?.map((i) => {
-      const assigned = i.assigned || i.total || 0;
-      const completed = i.completed || 0;
-
-      if (assigned === 0) return 0;
-      return Math.round((completed / assigned) * 100);
-    }) || [];
-
-  const monthlyChartData = {
-    labels: analytics?.monthlyData?.map((i) => i.month) || [],
-    datasets: [
-      {
-        label: "Efficiency %",
-        data: efficiencyData,
-        borderColor: "#4e73df",
-        backgroundColor: "rgba(78,115,223,0.1)",
-        tension: 0, // 🔥 straight line (clear up/down)
-        fill: false,
-
-        pointRadius: 7,
-        pointHoverRadius: 9,
-
-        // 🔥 Color points based on trend
-        pointBackgroundColor: efficiencyData.map((val, i) => {
-          if (i === 0) return "#4e73df";
-          return val >= efficiencyData[i - 1] ? "#28a745" : "#dc3545";
-        }),
-      },
-    ],
-  };
-
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
-
     plugins: {
       legend: { display: true },
       tooltip: {
@@ -135,17 +156,10 @@ function AdminDashboard() {
         },
       },
     },
-
     scales: {
       y: {
         beginAtZero: true,
         max: 100,
-      },
-    },
-
-    elements: {
-      line: {
-        borderWidth: 3,
       },
     },
   };
@@ -161,7 +175,6 @@ function AdminDashboard() {
       <div className="dashboard-container">
         <h2>🚀 Admin Analytics Dashboard</h2>
 
-        {/* CARDS */}
         <div className="cards">
           <div className="card green" onClick={() => navigate("/admin/tasks")}>
             <h3>Total Tasks</h3>
@@ -184,7 +197,6 @@ function AdminDashboard() {
           </div>
         </div>
 
-        {/* PROJECT CARDS */}
         <div className="cards" style={{ marginTop: "20px" }}>
           <div className="card blue">
             <h3>Total Projects</h3>
@@ -202,7 +214,6 @@ function AdminDashboard() {
           </div>
         </div>
 
-        {/* CHARTS */}
         <div className="chart-container">
           <div className="chart-box">
             <h3>Task Status Overview</h3>
@@ -215,7 +226,6 @@ function AdminDashboard() {
           </div>
         </div>
 
-        {/* UPCOMING */}
         <div className="section-card">
           <h3>📅 Upcoming Deadlines</h3>
           {analytics?.upcomingTasks?.length > 0 ? (
@@ -233,13 +243,12 @@ function AdminDashboard() {
           )}
         </div>
 
-        {/* OVERDUE */}
         <div className="section-card overdue-card">
           <h3>⚠️ Overdue Tasks</h3>
           {analytics?.overdueTasks?.length > 0 ? (
             <ul className="task-list">
               {analytics.overdueTasks.map((task, i) => (
-                <li key={i} className="overdue-item">
+                <li key={i}>
                   <strong>{task.task_name}</strong>
                   <span>{task.employee_username}</span>
                   <small>{new Date(task.deadline).toLocaleString()}</small>
@@ -251,7 +260,6 @@ function AdminDashboard() {
           )}
         </div>
 
-        {/* EMPLOYEE TABLE */}
         <div className="section-card">
           <h3>👨‍💻 Employee Performance</h3>
           <table>
@@ -263,7 +271,6 @@ function AdminDashboard() {
                 <th>Efficiency</th>
               </tr>
             </thead>
-
             <tbody>
               {analytics?.employeePerformance?.map((emp, i) => {
                 const efficiency =

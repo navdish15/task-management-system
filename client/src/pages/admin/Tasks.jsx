@@ -6,10 +6,16 @@ function Tasks() {
   const [tasks, setTasks] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
-
   const [editingTask, setEditingTask] = useState(null);
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  // ✅ SAFE localStorage (fixed)
+  let user = null;
+  try {
+    user = JSON.parse(localStorage.getItem("user"));
+  } catch {
+    user = null;
+  }
+
   const token = user?.token;
 
   const [formData, setFormData] = useState({
@@ -30,7 +36,10 @@ function Tasks() {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setEmployees(res.data))
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        alert("Failed to load employees");
+      });
   }, [token]);
 
   /* ================= FETCH TASKS ================= */
@@ -43,7 +52,10 @@ function Tasks() {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setTasks(res.data))
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        alert("Failed to load tasks");
+      });
   }, [token]);
 
   useEffect(() => {
@@ -91,8 +103,10 @@ function Tasks() {
 
       setSelectedFile(null);
       fetchTasks();
+      alert("Task assigned successfully"); // ✅ feedback
     } catch (err) {
       console.error(err);
+      alert("Failed to assign task");
     }
   };
 
@@ -107,29 +121,43 @@ function Tasks() {
       });
 
       fetchTasks();
+      alert("Task deleted");
     } catch (err) {
       console.error(err);
+      alert("Failed to delete task");
     }
   };
 
   /* ================= APPROVE / REJECT ================= */
 
   const approveTask = async (id) => {
-    await axios.put(
-      `http://localhost:5000/api/tasks/admin/approve/${id}`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
-    fetchTasks();
+    try {
+      await axios.put(
+        `http://localhost:5000/api/tasks/admin/approve/${id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      fetchTasks();
+      alert("Task approved");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to approve task");
+    }
   };
 
   const rejectTask = async (id) => {
-    await axios.put(
-      `http://localhost:5000/api/tasks/reject/${id}`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
-    fetchTasks();
+    try {
+      await axios.put(
+        `http://localhost:5000/api/tasks/reject/${id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      fetchTasks();
+      alert("Task rejected");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to reject task");
+    }
   };
 
   /* ================= UPDATE TASK ================= */
@@ -144,8 +172,10 @@ function Tasks() {
 
       setEditingTask(null);
       fetchTasks();
+      alert("Task updated");
     } catch (err) {
       console.error(err);
+      alert("Failed to update task");
     }
   };
 
@@ -273,7 +303,6 @@ function Tasks() {
                     <td>{task.employee_username}</td>
                     <td>{new Date(task.deadline).toLocaleString()}</td>
 
-                    {/* ✅ Priority Badge */}
                     <td>
                       <span
                         className={`priority-badge ${task.priority.toLowerCase()}`}
@@ -282,13 +311,9 @@ function Tasks() {
                       </span>
                     </td>
 
-                    {/* ✅ Status Badge */}
                     <td>
                       <span
-                        className={`status-badge ${task.status.replace(
-                          " ",
-                          "-",
-                        )}`}
+                        className={`status-badge ${task.status.replace(" ", "-")}`}
                       >
                         {task.status}
                       </span>
@@ -370,7 +395,7 @@ function Tasks() {
           </table>
         </div>
 
-        {/* EDIT MODAL SAME */}
+        {/* EDIT MODAL */}
         {editingTask && (
           <div className="modal">
             <div className="modal-content">

@@ -10,12 +10,18 @@ function AdminLayout({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  // 🔐 Safe localStorage parse
+  let user = null;
+  try {
+    user = JSON.parse(localStorage.getItem("user"));
+  } catch {
+    user = null;
+  }
 
   useEffect(() => {
     if (!user?.username) return;
 
-    // Join room for presence + notifications
+    // Join room
     socket.emit("joinRoom", user.username);
 
     const loadNotifications = async () => {
@@ -32,7 +38,7 @@ function AdminLayout({ children }) {
     socket.on("newNotification", (data) => {
       setNotifications((prev) => [
         {
-          id: Date.now(),
+          id: crypto.randomUUID(), // 🔥 safer ID
           message: data.message,
           is_read: false,
         },
@@ -42,8 +48,24 @@ function AdminLayout({ children }) {
 
     return () => {
       socket.off("newNotification");
+      socket.emit("leaveRoom", user.username); // 🔥 cleanup
     };
   }, [user?.username]);
+
+  // 🔥 Close dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (
+        !e.target.closest(".notification-dropdown") &&
+        !e.target.closest(".notification-icon")
+      ) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, []);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -74,9 +96,10 @@ function AdminLayout({ children }) {
         <h1>Admin Dashboard</h1>
 
         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          {/* Notification Bell */}
+          {/* 🔔 Notification Bell */}
           <div style={{ position: "relative", cursor: "pointer" }}>
             <span
+              className="notification-icon"
               style={{ fontSize: "22px" }}
               onClick={() => setShowDropdown(!showDropdown)}
             >
@@ -100,6 +123,7 @@ function AdminLayout({ children }) {
               </span>
             )}
 
+            {/* Dropdown */}
             {showDropdown && (
               <div className="notification-dropdown">
                 <div className="notification-header">
@@ -117,7 +141,9 @@ function AdminLayout({ children }) {
                   {notifications.map((n) => (
                     <div
                       key={n.id}
-                      className={`notification-item ${!n.is_read ? "unread" : ""}`}
+                      className={`notification-item ${
+                        !n.is_read ? "unread" : ""
+                      }`}
                       onClick={() => markAsRead(n.id)}
                     >
                       <div className="notification-icon">

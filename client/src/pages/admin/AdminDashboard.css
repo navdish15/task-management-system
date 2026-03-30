@@ -15,19 +15,17 @@
   color: #2c3e50;
 }
 
-/* ================= CARD GRID ================= */
+/* ================= CARD GRID (FIXED TO GRID) ================= */
 
 .cards {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
-  justify-content: center;
 }
 
 /* ================= CARD ================= */
 
 .card {
-  width: 280px;
   padding: 25px;
   border-radius: 18px;
   color: #fff;
@@ -80,10 +78,11 @@
   background: linear-gradient(135deg, #fd7e14, #c05600);
 }
 
-/* ================= CHART SECTION ================= */
+/* ================= CHART SECTION (FIXED) ================= */
 
 .chart-container {
   display: flex;
+  flex-wrap: wrap;
   gap: 40px;
   margin-top: 40px;
   margin-bottom: 40px;
@@ -186,7 +185,7 @@
   font-size: 12px;
 }
 
-/* Efficiency colors (matches your JS logic) */
+/* Efficiency colors */
 .badge.green {
   background: #e6f9f0;
   color: #00a86b;
@@ -202,28 +201,13 @@
   color: #ff4d4f;
 }
 
-/* ================= TOP PERFORMER ================= */
-
-.top-performer {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.avatar {
-  background: linear-gradient(135deg, gold, orange);
-  padding: 15px;
-  border-radius: 50%;
-  font-size: 22px;
-}
-
-/* ================= TABLE (UPGRADED 🔥) ================= */
+/* ================= TABLE ================= */
 
 table {
   width: 100%;
   margin-top: 20px;
-  border-collapse: separate; /* 🔥 key change */
-  border-spacing: 0 10px; /* row spacing */
+  border-collapse: separate;
+  border-spacing: 0 10px;
   background: transparent;
 }
 
@@ -236,7 +220,6 @@ th {
   font-weight: 600;
 }
 
-/* Rounded header */
 th:first-child {
   border-top-left-radius: 12px;
 }
@@ -262,18 +245,16 @@ tr td:last-child {
   border-bottom-right-radius: 10px;
 }
 
-/* Hover effect */
+/* FIXED HOVER (NO SCALE BUG) */
 tr:hover td {
   background: #f4f8ff;
-  transform: scale(1.01);
-  transition: 0.2s ease;
 }
 
 /* ================= RESPONSIVE ================= */
 
 @media (max-width: 768px) {
-  .card {
-    width: 100%;
+  .dashboard-container {
+    padding: 15px;
   }
 
   .chart-container {

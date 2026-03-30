@@ -586,3 +586,74 @@
   font-weight: 600;
   color: #333;
 }
+.project-filters {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.project-filters input,
+.project-filters select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+.projects-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* SAME HEIGHT FOR ALL */
+.header-right input,
+.header-right select,
+.header-right .create-btn {
+  height: 42px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+/* WIDTH CONTROL */
+.header-right input {
+  width: 220px;
+  padding: 0 12px;
+}
+
+.header-right select {
+  width: 150px;
+  padding: 0 10px;
+}
+
+.header-right .create-btn {
+  width: 180px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+}
+
+/* BUTTON STYLE (keep your gradient if you have) */
+.create-btn {
+  background: linear-gradient(135deg, #6c5ce7, #5f27cd);
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+@media (max-width: 768px) {
+  .header-right {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .header-right input,
+  .header-right select,
+  .header-right .create-btn {
+    width: 100%;
+  }
+}
