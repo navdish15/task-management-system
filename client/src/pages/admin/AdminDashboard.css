@@ -33,7 +33,8 @@
   font-weight: 600;
   font-size: 18px;
   cursor: pointer;
-
+  position: relative;
+  overflow: hidden;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
   transition: all 0.3s ease;
 }
@@ -48,13 +49,16 @@
 .card h3 {
   font-size: 18px;
   margin-bottom: 10px;
-  opacity: 0.9;
+  color: #ffffff; /* FORCE WHITE */
+  opacity: 1; /* REMOVE FADE */
+  letter-spacing: 0.5px;
 }
 
 .card p {
-  font-size: 32px;
-  font-weight: bold;
+  font-size: 34px;
+  font-weight: 700;
   margin: 0;
+  color: #ffffff; /* FORCE WHITE */
 }
 
 /* ================= COLORS ================= */
@@ -101,7 +105,22 @@
   margin-bottom: 10px;
   color: #2c3e50;
 }
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.15);
+  z-index: 0;
+}
 
+/* keep text above overlay */
+.card h3,
+.card p {
+  position: relative;
+  z-index: 1;
+  color: #ffffff !important; /* FORCE WHITE */
+  opacity: 1 !important; /* REMOVE FADE */
+}
 /* ================= SECTION CARDS ================= */
 
 .section-card {

@@ -1,109 +1,125 @@
 /* ================= FLOATING BUTTON ================= */
-
 .floatingButton {
   position: fixed;
-  bottom: 25px;
-  right: 25px;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
-  color: white;
+  bottom: 20px;
+  right: 20px;
+  background: #2563eb;
+  color: #fff;
   font-size: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 14px 16px;
+  border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
-  z-index: 9999;
-  transition: all 0.25s ease;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  z-index: 999;
+  transition: 0.2s;
 }
 
 .floatingButton:hover {
-  transform: scale(1.08);
+  transform: scale(1.1);
 }
 
 /* ================= CHAT CONTAINER ================= */
-
 .chatContainer {
   position: fixed;
-  bottom: 100px;
-  right: 25px;
-  width: 380px;
-  height: 560px;
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.25);
+  bottom: 80px;
+  right: 20px;
+  width: 320px;
+  height: 480px;
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  z-index: 9999;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
 }
 
 /* ================= HEADER ================= */
-
 .chatHeader {
-  height: 60px;
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  background: #2563eb;
   color: white;
+  padding: 12px;
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  font-weight: 600;
-
-  position: sticky; /* ✅ FIXED */
-  top: 0;
+  gap: 10px;
+  font-weight: 500;
+  position: relative;
   z-index: 10;
 }
 
-.listHeader {
-  justify-content: center;
-  font-size: 15px;
-}
-
 .backBtn {
-  border: none;
   background: none;
+  border: none;
   color: white;
-  font-size: 18px;
-  margin-right: 10px;
+  font-size: 16px;
   cursor: pointer;
 }
 
 .headerAvatar {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  margin-right: 10px;
 }
 
 .chatTitle {
-  font-size: 14px;
+  flex: 1;
 }
 
 .headerMenu {
-  margin-left: auto;
+  position: relative;
 }
 
 .menuBtn {
-  border: none;
   background: none;
+  border: none;
   color: white;
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
 }
 
-/* ================= CHAT LIST ================= */
+/* ================= DROPDOWN ================= */
+.headerDropdown {
+  position: absolute;
+  right: 10px;
+  top: 45px;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  min-width: 140px;
+  z-index: 1000;
+}
 
+.headerDropdown button {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: white;
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.headerDropdown button:hover {
+  background: #f3f4f6;
+}
+
+/* ================= USER LIST ================= */
 .userListView {
-  flex: 1;
   display: flex;
   flex-direction: column;
+  height: 100%;
+}
+
+.listHeader {
+  text-align: center;
+  font-weight: bold;
 }
 
 .userList {
@@ -111,300 +127,244 @@
   overflow-y: auto;
 }
 
+/* hide scrollbar */
 .userList::-webkit-scrollbar {
-  width: 0px;
+  display: none;
+}
+.userList {
+  scrollbar-width: none;
 }
 
 .userItem {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 10px;
+  padding: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: 0.2s;
 }
 
 .userItem:hover {
-  background: #f5f5f7;
+  background: #f3f4f6;
 }
 
-/* avatar */
-
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  background: #2563eb;
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
 }
 
 /* ================= CHAT VIEW ================= */
-
 .chatView {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%; /* ✅ IMPORTANT */
+  height: 100%;
 }
 
 /* ================= MESSAGES ================= */
-
 .messages {
   flex: 1;
-  padding: 18px;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  background: linear-gradient(to bottom, #f9fafb, #f3f4f6);
-  scroll-behavior: smooth; /* ✅ smooth scroll */
+  padding: 10px;
+  background: #f9fafb;
 }
 
+/* hide scrollbar */
 .messages::-webkit-scrollbar {
-  width: 0px;
+  display: none;
+}
+.messages {
+  scrollbar-width: none;
 }
 
+/* ================= MESSAGE ROW ================= */
 .messageRow {
   display: flex;
+  margin-bottom: 8px;
 }
 
-.messageRow.sent {
+.sent {
   justify-content: flex-end;
 }
 
-.messageRow.received {
+.received {
   justify-content: flex-start;
 }
 
+/* ================= MESSAGE BUBBLE ================= */
 .messageBubble {
-  padding: 10px 16px;
-  border-radius: 18px;
   max-width: 75%;
+  padding: 10px 12px 18px 12px;
+  border-radius: 12px;
   font-size: 14px;
-  line-height: 1.4;
-  word-break: break-word;
-  animation: popIn 0.15s ease-out;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  position: relative; /* important for hover meta */
+  transition: 0.2s;
+  min-width: 60px; /* 👈 prevents too small bubble */
 }
-
-/* sent */
 
 .sent .messageBubble {
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
-  color: white;
-  border-bottom-right-radius: 6px;
+  background: #2563eb;
+  color: #ffffff;
 }
 
-/* FIX FILE LINK VISIBILITY */
 .sent .messageBubble a {
   color: #ffffff;
   text-decoration: underline;
 }
 
-/* received */
-
 .received .messageBubble {
   background: white;
-  color: #333;
+  color: #111827;
   border: 1px solid #e5e7eb;
-  border-bottom-left-radius: 6px;
+}
+
+.messageBubble:hover {
+  transform: scale(1.02);
+}
+
+/* ================= MESSAGE META (HOVER ONLY) ================= */
+/* hidden by default */
+.messageMeta {
+  position: absolute;
+  bottom: 4px;
+  right: 8px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: 0.2s ease;
+}
+
+/* show on hover */
+.messageBubble:hover .messageMeta {
+  opacity: 1;
+}
+
+/* sent vs received color */
+.sent .messageMeta {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.received .messageMeta {
+  color: #6b7280;
+}
+
+/* ================= TICKS ================= */
+.tick::after {
+  content: "✓";
+}
+
+.tick.delivered::after {
+  content: "✓✓";
+}
+
+.tick.seen::after {
+  content: "✓✓";
+  color: #22c55e;
 }
 
 /* ================= FILE ================= */
-
 .fileCard {
   margin-top: 6px;
 }
 
 .chatImage {
-  max-width: 200px;
+  max-width: 100%;
   border-radius: 8px;
-  margin-top: 6px;
 }
 
 /* ================= INPUT ================= */
-
 .inputWrapper {
-  border-top: 1px solid #e5e7eb;
   padding: 10px;
+  border-top: 1px solid #e5e7eb;
   background: white;
-
-  position: sticky; /* ✅ FIXED */
-  bottom: 0;
-}
-
-.filePreview {
-  background: #f3f4f6;
-  padding: 8px 12px;
-  border-radius: 10px;
-  font-size: 13px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.removeFile {
-  cursor: pointer;
-  font-weight: bold;
-  color: #ef4444;
 }
 
 .inputContainer {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-}
-
-.attachBtn {
-  font-size: 18px;
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 50%;
-}
-
-.attachBtn:hover {
-  background: rgba(79, 70, 229, 0.1);
 }
 
 .inputContainer input {
   flex: 1;
-  padding: 10px 14px;
-  border-radius: 20px;
+  padding: 8px;
+  border-radius: 8px;
   border: 1px solid #e5e7eb;
   outline: none;
-  font-size: 14px;
-}
-
-.inputContainer input:focus {
-  border-color: #4f46e5;
 }
 
 .inputContainer button {
-  padding: 8px 18px;
-  border-radius: 20px;
-  border: none;
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  background: #2563eb;
   color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: 600;
+}
+
+.inputContainer button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ================= FILE PREVIEW ================= */
+.filePreview {
+  background: #f3f4f6;
+  padding: 6px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.removeFile {
+  cursor: pointer;
+}
+
+/* ================= EMPTY ================= */
+.emptyChat {
+  text-align: center;
+  margin-top: 40px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.loading {
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
 }
 
 /* ================= CONTEXT MENU ================= */
-
 .messageMenu {
   position: fixed;
   background: white;
-  border-radius: 12px;
-  padding: 4px 0;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  min-width: 150px;
-  z-index: 99999;
-  animation: menuPop 0.15s ease;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  z-index: 999;
 }
 
 .messageMenu button {
-  width: 100%;
-  padding: 10px 14px;
+  display: block;
+  padding: 10px;
   border: none;
-  background: transparent;
-  text-align: left;
-  font-size: 14px;
+  background: white;
   cursor: pointer;
-  display: flex;
-  gap: 10px;
+  width: 100%;
+  text-align: left;
 }
 
 .messageMenu button:hover {
   background: #f3f4f6;
 }
-
-.messageMenu button:last-child {
-  color: #ef4444;
-}
-
-/* ================= HEADER DROPDOWN ================= */
-
-.headerDropdown {
-  position: absolute;
-  top: 48px;
-  right: 10px;
-  background: white;
-  border-radius: 14px;
-  min-width: 170px;
-  padding: 6px 0;
-  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.18);
-  overflow: hidden;
-  z-index: 9999;
-  animation: menuPop 0.15s ease;
-}
-
-.headerDropdown button {
-  width: 100%;
-  border: none;
-  background: transparent;
-  padding: 12px 16px;
-  text-align: left;
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.headerDropdown button:hover {
-  background: #f3f4f6;
-}
-
-.headerDropdown button + button {
-  border-top: 1px solid #f1f1f1;
-}
-
-.headerDropdown button:last-child {
-  color: #ef4444;
-}
-
-/* ================= ANIMATION ================= */
-
-@keyframes popIn {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes menuPop {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ================= MOBILE ================= */
-
-@media (max-width: 768px) {
-  .chatContainer {
-    width: 100%;
-    height: 100%;
-    bottom: 0;
-    right: 0;
-    border-radius: 0;
-  }
-
-  .floatingButton {
-    bottom: 20px;
-    right: 20px;
-  }
+.messageMeta span {
+  white-space: nowrap; /* 👈 FIX */
 }

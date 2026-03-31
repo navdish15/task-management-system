@@ -7,11 +7,21 @@ module.exports = (io, socket) => {
     socket.join(`chat_${chatId}`);
   });
 
+  /* ================= LEAVE CHAT ================= */
+  socket.on("leave_chat", (chatId) => {
+    if (!chatId) return;
+    socket.leave(`chat_${chatId}`);
+  });
+
   /* ================= SEND MESSAGE ================= */
   socket.on("send_message", async (data) => {
     const { chatId, senderId, message, file_url, file_name } = data;
 
+    const cleanMessage = message?.trim();
+
+    // ✅ validation
     if (!chatId || !senderId) return;
+    if (!cleanMessage && !file_url) return;
 
     try {
       const [result] = await db.query(
@@ -21,23 +31,26 @@ module.exports = (io, socket) => {
         [
           chatId,
           senderId,
-          message || null,
+          cleanMessage || null,
           file_url || null,
           file_name || null,
         ],
       );
 
+      /* ✅ fetch inserted message (correct timestamp) */
+      const [rows] = await db.query(`SELECT * FROM messages WHERE id = ?`, [
+        result.insertId,
+      ]);
+
+      if (!rows.length) return;
+
+      const msg = rows[0];
+
       const newMessage = {
-        id: result.insertId,
-        chatId,
-        sender_id: senderId,
-        message,
-        file_url,
-        file_name,
-        is_read: 0,
-        edited: 0,
-        deleted_for_everyone: 0,
-        created_at: new Date(),
+        ...msg,
+        chatId: msg.chat_id,
+        delivered: 1,
+        seen: 0,
       };
 
       io.to(`chat_${chatId}`).emit("receive_message", newMessage);
@@ -50,14 +63,16 @@ module.exports = (io, socket) => {
   socket.on("edit_message", async (data) => {
     const { id, message, chatId } = data;
 
-    if (!id || !message) return;
+    const cleanMessage = message?.trim();
+
+    if (!id || !cleanMessage) return;
 
     try {
       await db.query(
         `UPDATE messages 
          SET message = ?, edited = 1 
          WHERE id = ?`,
-        [message, id],
+        [cleanMessage, id],
       );
 
       const [rows] = await db.query(`SELECT * FROM messages WHERE id = ?`, [
@@ -76,29 +91,28 @@ module.exports = (io, socket) => {
   socket.on("delete_for_everyone", async (data) => {
     const { id, chatId, requesterId } = data;
 
+    if (!id || !chatId || !requesterId) return;
+
     try {
       const [rows] = await db.query(
         `SELECT sender_id FROM messages WHERE id = ?`,
         [id],
       );
 
-      if (rows.length === 0) return;
+      if (!rows.length) return;
 
       const senderId = rows[0].sender_id;
 
-      // get requester role
       const [users] = await db.query(`SELECT role FROM users WHERE id = ?`, [
         requesterId,
       ]);
 
-      if (users.length === 0) return;
+      if (!users.length) return;
 
       const role = users[0].role;
 
-      // Rule 2 logic
-      if (requesterId !== senderId && role !== "admin") {
-        return;
-      }
+      // ✅ permission check
+      if (requesterId !== senderId && role !== "admin") return;
 
       await db.query(
         `UPDATE messages 
@@ -117,16 +131,17 @@ module.exports = (io, socket) => {
   socket.on("delete_for_me", async (data) => {
     const { id, userId } = data;
 
+    if (!id || !userId) return;
+
     try {
       const [rows] = await db.query(
         `SELECT deleted_by FROM messages WHERE id = ?`,
         [id],
       );
 
-      if (rows.length === 0) return;
+      if (!rows.length) return;
 
       let deletedBy = rows[0].deleted_by || "";
-
       const arr = deletedBy ? deletedBy.split(",") : [];
 
       if (!arr.includes(String(userId))) {
@@ -150,6 +165,8 @@ module.exports = (io, socket) => {
   socket.on("mark_read", async (data) => {
     const { chatId, readerId } = data;
 
+    if (!chatId || !readerId) return;
+
     try {
       await db.query(
         `UPDATE messages 
@@ -158,7 +175,10 @@ module.exports = (io, socket) => {
         [chatId, readerId],
       );
 
-      io.to(`chat_${chatId}`).emit("messages_read", { chatId });
+      io.to(`chat_${chatId}`).emit("messages_read", {
+        chatId,
+        readerId,
+      });
     } catch (err) {
       console.error("Mark read error:", err);
     }
@@ -167,6 +187,8 @@ module.exports = (io, socket) => {
   /* ================= TYPING ================= */
   socket.on("typing", (data) => {
     const { chatId, senderId } = data;
+
+    if (!chatId || !senderId) return;
 
     socket.to(`chat_${chatId}`).emit("user_typing", {
       chatId,

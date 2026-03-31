@@ -5,21 +5,32 @@ const chatController = require("../controllers/chatController");
 const { promisePool: db } = require("../config/db");
 const upload = require("../middleware/upload");
 
-/* ===== GET USERS FOR CHAT (Admin + Employee) ===== */
+/* ===== GET USERS FOR CHAT (ROLE BASED) ===== */
 router.get("/users", verifyToken, async (req, res) => {
   try {
-    const [users] = await db.query(
-      "SELECT id, username, name, role FROM users WHERE status='active'",
-    );
+    const role = req.user.role;
+
+    let query = `
+      SELECT id, username, name, role 
+      FROM users 
+      WHERE status='active'
+    `;
+
+    // ✅ employees only see admins
+    if (role !== "admin") {
+      query += " AND role = 'admin'";
+    }
+
+    const [users] = await db.query(query);
 
     res.json(users);
   } catch (err) {
-    console.error(err);
+    console.error("Get users error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-/* ===== GET PROJECT CHATS (NEW) ===== */
+/* ===== GET PROJECT CHATS ===== */
 router.get("/projects", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -60,17 +71,24 @@ router.post("/send", verifyToken, chatController.sendMessage);
 
 /* ===== UPLOAD FILE ===== */
 router.post("/upload", verifyToken, upload.single("file"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ message: "No file uploaded" });
-  }
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
 
-  res.json({
-    fileUrl: `/uploads/chat/${req.file.filename}`,
-    fileName: req.file.originalname,
-  });
+    const baseUrl = process.env.BASE_URL || "http://localhost:5000";
+
+    res.json({
+      fileUrl: `${baseUrl}/uploads/chat/${req.file.filename}`,
+      fileName: req.file.originalname,
+    });
+  } catch (err) {
+    console.error("Upload error:", err);
+    res.status(500).json({ message: "Upload failed" });
+  }
 });
 
-/* ================= NEW PHASE 6 ROUTES ================= */
+/* ================= MESSAGE ACTIONS ================= */
 
 /* ===== EDIT MESSAGE ===== */
 router.put("/message/:id", verifyToken, chatController.editMessage);

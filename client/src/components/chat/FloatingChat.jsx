@@ -4,6 +4,8 @@ import api from "../../services/api";
 import { jwtDecode } from "jwt-decode";
 import "./FloatingChat.css";
 
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 const FloatingChat = ({ currentUser }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState("list");
@@ -14,7 +16,8 @@ const FloatingChat = ({ currentUser }) => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
 
-  const [chatId, setChatId] = useState(null);
+  const chatIdRef = useRef(null);
+
   const [messages, setMessages] = useState([]);
 
   const [newMessage, setNewMessage] = useState("");
@@ -26,11 +29,26 @@ const FloatingChat = ({ currentUser }) => {
   const [menuMessage, setMenuMessage] = useState(null);
 
   const [headerMenu, setHeaderMenu] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const messagesEndRef = useRef(null);
 
-  const storedUser = JSON.parse(localStorage.getItem("user"));
-  const decodedUser = storedUser?.token ? jwtDecode(storedUser.token) : null;
+  /* ================= SAFE LOCAL STORAGE ================= */
+  let storedUser = null;
+  try {
+    storedUser = JSON.parse(localStorage.getItem("user"));
+  } catch {
+    console.error("Invalid localStorage user");
+  }
+
+  /* ================= SAFE JWT ================= */
+  let decodedUser = null;
+  try {
+    decodedUser = storedUser?.token ? jwtDecode(storedUser.token) : null;
+  } catch {
+    console.error("Invalid token");
+  }
 
   const displayName =
     selectedUser?.name ||
@@ -41,13 +59,58 @@ const FloatingChat = ({ currentUser }) => {
   const firstLetter = displayName ? displayName.charAt(0).toUpperCase() : "";
 
   /* ================= AUTO SCROLL ================= */
-
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (!editingMessageId) {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: messages.length < 5 ? "auto" : "smooth",
+      });
+    }
+  }, [messages, editingMessageId]);
 
-  /* ================= LOAD USERS + PROJECT CHATS ================= */
+  /* ================= SOCKET LISTENER ================= */
+  useEffect(() => {
+    const handler = (msg) => {
+      if (msg.chatId !== chatIdRef.current) return;
 
+      setMessages((prev) => {
+        if (prev.find((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+    };
+
+    socket.on("receive_message", handler);
+
+    return () => socket.off("receive_message", handler);
+  }, []);
+
+  /* ================= CLEANUP ON UNMOUNT ================= */
+  useEffect(() => {
+    return () => {
+      if (chatIdRef.current) {
+        socket.emit("leave_chat", chatIdRef.current);
+      }
+    };
+  }, []);
+
+  /* ================= CLOSE MENUS ================= */
+  useEffect(() => {
+    const handleClick = () => {
+      setHeaderMenu(false);
+      setContextMenu(null);
+    };
+
+    const handleScroll = () => setContextMenu(null);
+
+    window.addEventListener("click", handleClick);
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("click", handleClick);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  /* ================= LOAD USERS ================= */
   useEffect(() => {
     if (!isOpen || !currentUser) return;
 
@@ -73,47 +136,62 @@ const FloatingChat = ({ currentUser }) => {
     loadData();
   }, [isOpen, currentUser]);
 
-  /* ================= OPEN PRIVATE CHAT ================= */
+  /* ================= SWITCH CHAT ================= */
+  const switchChat = async (id) => {
+    try {
+      setLoading(true);
+      setMessages([]);
+
+      if (chatIdRef.current) {
+        socket.emit("leave_chat", chatIdRef.current);
+      }
+
+      chatIdRef.current = id;
+
+      socket.emit("join_chat", id);
+
+      const messagesRes = await api.get(`/chat/messages/${id}`);
+
+      if (chatIdRef.current === id) {
+        setMessages(messagesRes.data);
+      }
+    } catch (error) {
+      console.error("Chat switch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const openPrivateChat = async (user) => {
     setSelectedUser(user);
     setSelectedProject(null);
     setView("chat");
 
-    const res = await api.post("/chat/private", {
-      receiverId: user.id,
-    });
+    try {
+      const res = await api.post("/chat/private", {
+        receiverId: user.id,
+      });
 
-    const id = res.data.chatId;
-    setChatId(id);
-
-    socket.emit("join_chat", id);
-
-    const messagesRes = await api.get(`/chat/messages/${id}`);
-    setMessages(messagesRes.data);
+      await switchChat(res.data.chatId);
+    } catch (error) {
+      console.error("Private chat error:", error);
+    }
   };
-
-  /* ================= OPEN PROJECT CHAT ================= */
 
   const openProjectChat = async (project) => {
     setSelectedProject(project);
     setSelectedUser(null);
     setView("chat");
 
-    const id = project.chat_id;
-    setChatId(id);
-
-    socket.emit("join_chat", id);
-
-    const messagesRes = await api.get(`/chat/messages/${id}`);
-    setMessages(messagesRes.data);
+    await switchChat(project.chat_id);
   };
 
   /* ================= SEND MESSAGE ================= */
-
   const handleSend = async () => {
-    if (!chatId || !decodedUser) return;
+    if (!chatIdRef.current || !decodedUser || sending) return;
     if (!newMessage.trim() && !selectedFile) return;
+
+    setSending(true);
 
     let file_url = null;
     let file_name = null;
@@ -124,7 +202,6 @@ const FloatingChat = ({ currentUser }) => {
         formData.append("file", selectedFile);
 
         const uploadRes = await api.post("/chat/upload", formData);
-
         file_url = uploadRes.data.fileUrl;
         file_name = uploadRes.data.fileName;
       }
@@ -143,7 +220,7 @@ const FloatingChat = ({ currentUser }) => {
         setEditingMessageId(null);
       } else {
         socket.emit("send_message", {
-          chatId,
+          chatId: chatIdRef.current,
           senderId: decodedUser.id,
           message: newMessage || null,
           file_url,
@@ -155,43 +232,56 @@ const FloatingChat = ({ currentUser }) => {
       setSelectedFile(null);
     } catch (error) {
       console.error("Send failed:", error);
+    } finally {
+      setSending(false);
     }
   };
 
-  /* ================= RIGHT CLICK MENU ================= */
+  /* ================= FILE VALIDATION ================= */
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const allowedTypes = ["image/jpeg", "image/png", "application/pdf"];
+
+    if (!allowedTypes.includes(file.type)) {
+      alert("Only JPG, PNG or PDF allowed");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File too large (max 5MB)");
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  /* ================= CONTEXT MENU ================= */
   const openContextMenu = (e, msg) => {
     if (msg.sender_id !== decodedUser?.id) return;
 
     e.preventDefault();
-
     const rect = e.currentTarget.getBoundingClientRect();
 
     const isSent = msg.sender_id === decodedUser?.id;
 
+    const x = isSent
+      ? Math.max(10, rect.left - 170)
+      : Math.min(window.innerWidth - 180, rect.right + 10);
+
+    const y = Math.max(10, rect.top);
+
     setMenuMessage(msg);
-
-    setContextMenu({
-      x: isSent ? rect.left - 170 : rect.right + 8,
-      y: rect.top,
-    });
+    setContextMenu({ x, y });
   };
-
-  const closeContextMenu = () => {
-    setContextMenu(null);
-  };
-
-  /* ================= EDIT ================= */
 
   const editMessage = () => {
     if (!menuMessage) return;
-
     setEditingMessageId(menuMessage.id);
     setNewMessage(menuMessage.message);
-
-    closeContextMenu();
+    setContextMenu(null);
   };
-
-  /* ================= DELETE ================= */
 
   const deleteMessage = async () => {
     if (!menuMessage) return;
@@ -210,7 +300,7 @@ const FloatingChat = ({ currentUser }) => {
       console.error("Delete failed:", error);
     }
 
-    closeContextMenu();
+    setContextMenu(null);
   };
 
   return (
@@ -226,9 +316,7 @@ const FloatingChat = ({ currentUser }) => {
       </div>
 
       {isOpen && (
-        <div className="chatContainer" onClick={closeContextMenu}>
-          {/* CHAT LIST */}
-
+        <div className="chatContainer">
           {view === "list" && (
             <div className="userListView">
               <div className="chatHeader listHeader">Chats</div>
@@ -257,11 +345,13 @@ const FloatingChat = ({ currentUser }) => {
                     <span>{u.name || u.username}</span>
                   </div>
                 ))}
+
+                {users.length === 0 && projectChats.length === 0 && (
+                  <div className="emptyState">No chats available</div>
+                )}
               </div>
             </div>
           )}
-
-          {/* CHAT VIEW */}
 
           {view === "chat" && (
             <div className="chatView">
@@ -276,28 +366,20 @@ const FloatingChat = ({ currentUser }) => {
                 <div className="headerMenu">
                   <button
                     className="menuBtn"
-                    onClick={() => setHeaderMenu(!headerMenu)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setHeaderMenu(!headerMenu);
+                    }}
                   >
                     ⋮
                   </button>
 
                   {headerMenu && (
                     <div className="headerDropdown">
-                      <button
-                        onClick={() => {
-                          setMessages([]);
-                          setHeaderMenu(false);
-                        }}
-                      >
+                      <button onClick={() => setMessages([])}>
                         Clear Chat
                       </button>
-
-                      <button
-                        onClick={() => {
-                          setView("list");
-                          setHeaderMenu(false);
-                        }}
-                      >
+                      <button onClick={() => setView("list")}>
                         Close Chat
                       </button>
                     </div>
@@ -306,9 +388,15 @@ const FloatingChat = ({ currentUser }) => {
               </div>
 
               <div className="messages">
+                {loading && <div className="loading">Loading...</div>}
+
+                {messages.length === 0 && !loading && (
+                  <div className="emptyChat">No messages yet</div>
+                )}
+
                 {messages.map((msg) => (
                   <div
-                    key={msg.id}
+                    key={msg.id ?? `${msg.sender_id}-${msg.created_at}`}
                     className={`messageRow ${
                       msg.sender_id === decodedUser?.id ? "sent" : "received"
                     }`}
@@ -317,19 +405,50 @@ const FloatingChat = ({ currentUser }) => {
                       className="messageBubble"
                       onContextMenu={(e) => openContextMenu(e, msg)}
                     >
-                      {msg.message}
+                      {/* ✅ PRO MAX MESSAGE UI */}
+                      <div>
+                        {msg.message}
 
+                        <div className="messageMeta">
+                          <span>
+                            {msg.created_at
+                              ? new Date(msg.created_at).toLocaleTimeString(
+                                  [],
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false, // 👈 removes AM/PM
+                                  },
+                                )
+                              : ""}
+                          </span>
+
+                          {msg.sender_id === decodedUser?.id && (
+                            <span
+                              className={`tick ${
+                                msg.seen
+                                  ? "seen"
+                                  : msg.delivered
+                                    ? "delivered"
+                                    : "sent"
+                              }`}
+                            ></span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* FILE */}
                       {msg.file_url && (
                         <div className="fileCard">
                           {msg.file_url.match(/\.(jpg|jpeg|png)$/i) ? (
                             <img
-                              src={`http://localhost:5000${msg.file_url}`}
+                              src={`${BASE_URL}${msg.file_url}`}
                               alt="attachment"
                               className="chatImage"
                             />
                           ) : (
                             <a
-                              href={`http://localhost:5000${msg.file_url}`}
+                              href={`${BASE_URL}${msg.file_url}`}
                               target="_blank"
                               rel="noreferrer"
                             >
@@ -367,17 +486,29 @@ const FloatingChat = ({ currentUser }) => {
                     type="file"
                     id="fileUpload"
                     hidden
-                    onChange={(e) => setSelectedFile(e.target.files[0])}
+                    onChange={handleFileChange}
                   />
 
                   <input
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newMessage.trim()) {
+                        handleSend();
+                      }
+                    }}
                     placeholder="Type message..."
                   />
 
-                  <button onClick={handleSend}>
-                    {editingMessageId ? "Update" : "Send"}
+                  <button
+                    onClick={handleSend}
+                    disabled={(!newMessage.trim() && !selectedFile) || sending}
+                  >
+                    {sending
+                      ? "Sending..."
+                      : editingMessageId
+                        ? "Update"
+                        : "Send"}
                   </button>
                 </div>
               </div>
