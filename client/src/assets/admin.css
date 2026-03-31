@@ -94,53 +94,88 @@ body {
 }
 
 /* ================= DASHBOARD CARDS ================= */
+/* ================= DASHBOARD CARDS ================= */
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 22px;
   margin-top: 25px;
 }
 
+/* CARD BASE */
 .card {
-  border-radius: 16px;
-  padding: 30px 20px;
-  text-align: center;
+  border-radius: 18px;
+  padding: 25px 20px;
   color: white;
+  position: relative;
+  overflow: hidden;
+
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
   transition: 0.3s ease;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
 }
 
+/* 🔥 Hover animation */
+.card:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* TEXT */
 .card h3 {
-  font-size: 18px;
+  font-size: 15px;
+  opacity: 0.9;
   margin-bottom: 10px;
 }
 
 .card p {
-  font-size: 26px;
-  font-weight: 600;
-  margin: 0;
-}
-.card:hover {
-  transform: translateY(-6px);
+  font-size: 32px;
+  font-weight: 700;
 }
 
+/* ICON (optional if you add later) */
+.card::after {
+  content: "";
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
+/* ================= COLORS ================= */
+
+/* Total Tasks */
 .card.green {
-  background: linear-gradient(to right, #28a745, #1e7e34);
-}
-.card.pink {
-  background: linear-gradient(to right, #36a2eb, #1d72b8);
-}
-.card.yellow {
-  background: linear-gradient(to right, #ffc107, #e0a800);
-}
-.card.teal {
-  background: linear-gradient(to right, #20c997, #159e85);
-}
-.card.purple {
-  background: linear-gradient(to right, #8b5cf6, #6d28d9);
+  background: linear-gradient(135deg, #22c55e, #15803d);
 }
 
+/* Pending */
+.card.pink {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+/* Completed */
+.card.yellow {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+/* Employees */
+.card.teal {
+  background: linear-gradient(135deg, #14b8a6, #0f766e);
+}
+
+/* Projects */
+.card.purple {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+}
+
+/* Active Projects */
+.card.orange {
+  background: linear-gradient(135deg, #f97316, #c2410c);
+}
 /* ================= USERS PAGE ================= */
 
 .users-container,

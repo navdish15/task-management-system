@@ -1,0 +1,282 @@
+/* ================= CONTAINER ================= */
+
+.task-container {
+  padding: 25px;
+  background: #f4f6fb;
+}
+
+/* ================= CARD ================= */
+
+.task-card {
+  background: #fff;
+  padding: 25px;
+  border-radius: 16px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+}
+
+/* ================= TABLE ================= */
+
+.task-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+/* 🔥 HEADER WITH YOUR GRADIENT */
+.task-table thead {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+}
+
+.task-table th {
+  padding: 14px;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ================= TABLE BODY ================= */
+
+.task-table td {
+  padding: 14px;
+  text-align: center;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+}
+
+.task-table tbody tr {
+  transition: 0.2s ease;
+}
+
+.task-table tbody tr:hover {
+  background: #f9fafb;
+  transform: scale(1.002);
+}
+
+/* ================= BADGES ================= */
+
+.priority-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.priority-badge.low {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.priority-badge.medium {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.priority-badge.high {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge.Submitted {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.status-badge.Completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* ================= BUTTONS ================= */
+
+.btn-edit,
+.btn-delete,
+.btn-approve,
+.btn-reject {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  margin: 3px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.btn-edit {
+  background: #6366f1;
+  color: white;
+}
+
+.btn-delete {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-approve {
+  background: #22c55e;
+  color: white;
+}
+
+.btn-reject {
+  background: #f97316;
+  color: white;
+}
+
+.btn-edit:hover,
+.btn-delete:hover,
+.btn-approve:hover,
+.btn-reject:hover {
+  transform: translateY(-1px);
+  opacity: 0.9;
+}
+
+/* ================= APPROVED TEXT ================= */
+
+.approved-text {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+/* ================= LINKS ================= */
+
+.task-table a {
+  color: #6366f1;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.task-table a:hover {
+  text-decoration: underline;
+}
+
+/* ================= FORM ================= */
+
+.task-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.full-width {
+  grid-column: span 2;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  outline: none;
+  transition: 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* ================= BUTTON ================= */
+
+.btn-center {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.btn-assign {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+  padding: 10px 25px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-assign:hover {
+  transform: translateY(-2px);
+}
+
+/* ================= MODAL ================= */
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 25px;
+  border-radius: 14px;
+  width: 400px;
+}
+
+.modal-content input,
+.modal-content select {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn-save {
+  background: #6366f1;
+  color: white;
+}
+
+.btn-cancel {
+  background: #e5e7eb;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 768px) {
+  .task-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .full-width {
+    grid-column: span 1;
+  }
+
+  .task-table {
+    font-size: 12px;
+  }
+}

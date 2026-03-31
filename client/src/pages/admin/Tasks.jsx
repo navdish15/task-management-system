@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import AdminLayout from "../../components/AdminLayout";
+import "../../assets/tasks.css";
 
 function Tasks() {
   const [tasks, setTasks] = useState([]);

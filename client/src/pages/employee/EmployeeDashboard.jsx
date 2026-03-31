@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import axios from "axios";
 import EmployeeLayout from "../../components/EmployeeLayout";
 import "../../assets/EmployeeDashboard.css";
@@ -6,6 +6,7 @@ import "../../assets/EmployeeDashboard.css";
 function EmployeeDashboard() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const user = JSON.parse(localStorage.getItem("user"));
   const token = user?.token;
@@ -20,9 +21,10 @@ function EmployeeDashboard() {
       const res = await axios.get("http://localhost:5000/api/employee/tasks", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setTasks(res.data);
+      setTasks(res.data || []);
     } catch (err) {
       console.error(err);
+      setError("Failed to load tasks");
     } finally {
       setLoading(false);
     }
@@ -41,56 +43,70 @@ function EmployeeDashboard() {
     (t) => t.status === "In Progress",
   ).length;
 
-  /* ================= ACTIVE TASKS ================= */
+  const progressPercent = totalTasks
+    ? Math.round((completedTasks / totalTasks) * 100)
+    : 0;
 
-  const activeTasks = tasks.filter(
-    (t) => t.status === "Pending" || t.status === "In Progress",
-  );
+  /* ================= FILTERS ================= */
 
-  /* ================= TODAY TASKS ================= */
-
-  const today = new Date().toDateString();
-
-  const todayTasks = tasks.filter(
-    (t) => t.deadline && new Date(t.deadline).toDateString() === today,
-  );
-
-  /* ================= DEADLINE ALERTS (FIXED) ================= */
-
-  const urgentTasks = tasks.filter((task) => {
-    if (!task.deadline) return false;
-
-    const deadline = new Date(task.deadline);
-    const now = new Date();
-    const diff = deadline - now;
-
-    return (
-      diff > 0 &&
-      diff <= 24 * 60 * 60 * 1000 &&
-      deadline.toDateString() !== today && // ❌ remove today's duplicates
-      task.status !== "Completed"
+  const activeTasks = useMemo(() => {
+    return tasks.filter(
+      (t) => t.status === "Pending" || t.status === "In Progress",
     );
-  });
+  }, [tasks]);
 
-  /* ================= RECENT ================= */
+  /* ✅ FIXED (today inside useMemo) */
+  const todayTasks = useMemo(() => {
+    const today = new Date().toDateString();
 
-  const recentTasks = [...tasks]
-    .sort((a, b) => new Date(b.deadline) - new Date(a.deadline))
-    .slice(0, 5);
+    return tasks.filter(
+      (t) => t.deadline && new Date(t.deadline).toDateString() === today,
+    );
+  }, [tasks]);
 
-  /* ================= WEEKLY ================= */
+  /* ✅ FIXED (today inside useMemo) */
+  const urgentTasks = useMemo(() => {
+    const today = new Date().toDateString();
 
-  const weeklyCompleted = completedTasks;
-  const weeklyPending = pendingTasks;
+    return tasks.filter((task) => {
+      if (!task.deadline) return false;
+
+      const deadline = new Date(task.deadline);
+      const now = new Date();
+      const diff = deadline - now;
+
+      return (
+        diff > 0 &&
+        diff <= 24 * 60 * 60 * 1000 &&
+        deadline.toDateString() !== today &&
+        task.status !== "Completed"
+      );
+    });
+  }, [tasks]);
+
+  const recentTasks = useMemo(() => {
+    return [...tasks]
+      .sort((a, b) => {
+        if (!a.deadline) return 1;
+        if (!b.deadline) return -1;
+        return new Date(b.deadline) - new Date(a.deadline);
+      })
+      .slice(0, 5);
+  }, [tasks]);
+
+  /* ================= RENDER ================= */
 
   return (
     <EmployeeLayout>
       <div className="employee-dashboard">
         {/* HEADER */}
         <div className="dashboard-header">
-          <h2>Welcome, {username} 👋</h2>
+          <h2>Welcome, {username || "User"} 👋</h2>
           <p>Here’s your work overview.</p>
         </div>
+
+        {/* ERROR */}
+        {error && <p className="error">{error}</p>}
 
         {/* CARDS */}
         <div className="dashboard-cards">
@@ -118,15 +134,15 @@ function EmployeeDashboard() {
         {/* PROGRESS */}
         <div className="progress-box">
           <div className="progress-title">
-            Progress: {completedTasks}/{totalTasks}
+            Progress:{" "}
+            {totalTasks ? `${completedTasks}/${totalTasks}` : "No tasks"} (
+            {progressPercent}%)
           </div>
 
           <div className="progress-bar">
             <div
               className="progress-fill"
-              style={{
-                width: `${totalTasks ? (completedTasks / totalTasks) * 100 : 0}%`,
-              }}
+              style={{ width: `${progressPercent}%` }}
             ></div>
           </div>
         </div>
@@ -138,11 +154,17 @@ function EmployeeDashboard() {
             activeTasks.slice(0, 5).map((task) => (
               <div key={task.id} className="task-row">
                 <span>{task.task_name}</span>
-                <span className="status-badge small">{task.status}</span>
+                <span
+                  className={`status-badge small ${
+                    task.status?.replace(/\s+/g, "").toLowerCase() || "pending"
+                  }`}
+                >
+                  {task.status}
+                </span>{" "}
               </div>
             ))
           ) : (
-            <p className="empty">No active tasks</p>
+            <p className="empty">🎉 You're all caught up!</p>
           )}
         </div>
 
@@ -178,7 +200,7 @@ function EmployeeDashboard() {
 
         {/* WEEKLY INSIGHT */}
         <div className="insight-box">
-          📊 This week: {weeklyCompleted} completed, {weeklyPending} pending
+          📊 This week: {completedTasks} completed, {pendingTasks} pending
         </div>
 
         {/* RECENT TASKS */}
@@ -205,17 +227,29 @@ function EmployeeDashboard() {
                   recentTasks.map((task) => (
                     <tr key={task.id}>
                       <td>{task.task_name}</td>
-                      <td>{new Date(task.deadline).toLocaleString()}</td>
+
+                      <td>
+                        {task.deadline
+                          ? new Date(task.deadline).toLocaleString()
+                          : "No deadline"}
+                      </td>
+
                       <td>
                         <span
-                          className={`priority-badge ${task.priority.toLowerCase()}`}
+                          className={`priority-badge ${
+                            task.priority?.toLowerCase() || "low"
+                          }`}
                         >
-                          {task.priority}
+                          {task.priority || "Low"}
                         </span>
                       </td>
+
                       <td>
                         <span
-                          className={`status-badge ${task.status.replace(" ", "").toLowerCase()}`}
+                          className={`status-badge ${
+                            task.status?.replace(/\s+/g, "").toLowerCase() ||
+                            "pending"
+                          }`}
                         >
                           {task.status}
                         </span>

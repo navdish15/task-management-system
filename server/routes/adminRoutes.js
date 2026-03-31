@@ -92,7 +92,12 @@ router.post(
         [username, email, password, role, department, status],
       );
 
-      logAction(`Created user ${username}`, req.user.username, req.user.role);
+      logAction(
+        `Created user ${username}`,
+        req.user.username,
+        req.user.role,
+        req,
+      );
 
       res.json({ message: "User created successfully" });
     } catch (err) {
@@ -122,7 +127,12 @@ router.put(
         return res.status(404).json({ message: "User not found" });
       }
 
-      logAction(`Updated user ID ${userId}`, req.user.username, req.user.role);
+      logAction(
+        `Updated user ID ${userId}`,
+        req.user.username,
+        req.user.role,
+        req,
+      );
 
       res.json({ message: "User updated successfully" });
     } catch (err) {
@@ -151,6 +161,7 @@ router.delete(
         `Deleted user ID ${req.params.id}`,
         req.user.username,
         req.user.role,
+        req,
       );
 
       res.json({ message: "User deleted successfully" });
@@ -189,6 +200,7 @@ router.put(
         `Toggled status for user ID ${userId}`,
         req.user.username,
         req.user.role,
+        req,
       );
 
       res.json({ message: "Status updated" });

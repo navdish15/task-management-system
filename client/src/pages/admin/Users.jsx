@@ -1,10 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import api from "../../services/api";
 import socket from "../../services/socket";
 import AdminLayout from "../../components/AdminLayout";
-import "../../assets/adminUsers.css";
+import "../../assets/adminusers.css";
 
-/* 🔥 NEW: Centralized Departments */
 const DEPARTMENTS = ["HR", "Software", "Marketing", "Sales"];
 
 function Users() {
@@ -12,6 +11,7 @@ function Users() {
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [editUserId, setEditUserId] = useState(null);
@@ -28,41 +28,75 @@ function Users() {
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 5;
 
+  const debounceRef = useRef(null);
+
   /* ================= FETCH USERS ================= */
 
   const fetchUsers = useCallback(() => {
+    setLoading(true);
+
     api
       .get(`/admin/users?search=${search}`)
       .then((res) => setUsers(res.data))
-      .catch(console.error);
+      .catch((err) => {
+        console.error(err);
+        alert("Failed to load users");
+      })
+      .finally(() => setLoading(false));
   }, [search]);
 
+  /* ================= DEBOUNCE ================= */
+
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(() => {
+      fetchUsers();
+    }, 500);
+
+    return () => clearTimeout(debounceRef.current);
+  }, [search, fetchUsers]);
 
   /* ================= SOCKET ================= */
 
   useEffect(() => {
-    socket.on("updateOnlineUsers", (users) => {
-      setOnlineUsers(users);
-    });
+    const username = localStorage.getItem("username");
+    if (username) {
+      socket.emit("joinRoom", username);
+    }
 
-    return () => socket.off("updateOnlineUsers");
+    const handleOnlineUsers = (users) => {
+      setOnlineUsers(users);
+    };
+
+    socket.off("updateOnlineUsers", handleOnlineUsers);
+    socket.on("updateOnlineUsers", handleOnlineUsers);
+
+    return () => socket.off("updateOnlineUsers", handleOnlineUsers);
   }, []);
+
+  /* ================= OPTIMIZED SET ================= */
+
+  const onlineSet = useMemo(() => new Set(onlineUsers), [onlineUsers]);
 
   /* ================= DELETE ================= */
 
   const deleteUser = (id) => {
     if (window.confirm("Delete this user?")) {
-      api.delete(`/admin/users/${id}`).then(fetchUsers).catch(console.error);
+      api
+        .delete(`/admin/users/${id}`)
+        .then(fetchUsers)
+        .catch(() => alert("Delete failed"));
     }
   };
 
   /* ================= STATUS ================= */
 
   const toggleStatus = (id) => {
-    api.put(`/admin/users/toggle/${id}`).then(fetchUsers).catch(console.error);
+    api
+      .put(`/admin/users/toggle/${id}`)
+      .then(fetchUsers)
+      .catch(() => alert("Update failed"));
   };
 
   /* ================= EDIT ================= */
@@ -85,33 +119,23 @@ function Users() {
   /* ================= SAVE ================= */
 
   const saveUser = () => {
-    if (!formData.username) {
-      alert("Username is required!");
-      return;
+    if (!formData.username) return alert("Username required");
+    if (!formData.email.includes("@")) return alert("Invalid email");
+
+    if (!isEditMode && !formData.password) {
+      return alert("Password required");
     }
 
-    if (isEditMode) {
-      api
-        .put(`/admin/users/${editUserId}`, formData)
-        .then(() => {
-          resetForm();
-          fetchUsers();
-        })
-        .catch(console.error);
-    } else {
-      if (!formData.password) {
-        alert("Password is required!");
-        return;
-      }
+    const request = isEditMode
+      ? api.put(`/admin/users/${editUserId}`, formData)
+      : api.post("/admin/users", formData);
 
-      api
-        .post("/admin/users", formData)
-        .then(() => {
-          resetForm();
-          fetchUsers();
-        })
-        .catch(console.error);
-    }
+    request
+      .then(() => {
+        resetForm();
+        fetchUsers();
+      })
+      .catch(() => alert("Save failed"));
   };
 
   /* ================= RESET ================= */
@@ -133,12 +157,12 @@ function Users() {
 
   /* ================= PAGINATION ================= */
 
-  const indexOfLastUser = currentPage * usersPerPage;
-  const currentUsers = users.slice(
-    indexOfLastUser - usersPerPage,
-    indexOfLastUser,
-  );
-  const totalPages = Math.ceil(users.length / usersPerPage);
+  const totalPages = Math.max(1, Math.ceil(users.length / usersPerPage));
+
+  const currentUsers = useMemo(() => {
+    const last = currentPage * usersPerPage;
+    return users.slice(last - usersPerPage, last);
+  }, [users, currentPage]);
 
   return (
     <AdminLayout>
@@ -147,27 +171,19 @@ function Users() {
         <div className="users-header">
           <div>
             <h2>Manage Users</h2>
-            <p>Here you can manage users.</p>
+            <p>Manage all system users</p>
           </div>
 
           <div className="header-actions">
-            <div className="search-inline">
-              <input
-                type="text"
-                placeholder="Search users..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-
-              <button
-                onClick={() => {
-                  setCurrentPage(1);
-                  fetchUsers();
-                }}
-              >
-                Search
-              </button>
-            </div>
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
 
             <button className="btn-create" onClick={() => setShowModal(true)}>
               + Create User
@@ -191,64 +207,73 @@ function Users() {
             </thead>
 
             <tbody>
-              {currentUsers.map((user) => (
-                <tr key={user.id}>
-                  <td>{user.id}</td>
-
-                  <td>
-                    {user.username}
-                    {onlineUsers.includes(user.username) && <span> ●</span>}
-                  </td>
-
-                  <td>{user.email}</td>
-
-                  {/* 🔥 Role Badge */}
-                  <td>
-                    <span className={`role-badge ${user.role}`}>
-                      {user.role}
-                    </span>
-                  </td>
-
-                  {/* 🔥 Department Badge */}
-                  <td>
-                    {user.department ? (
-                      <span className="dept-badge">{user.department}</span>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-
-                  {/* 🔥 Status Badge */}
-                  <td>
-                    <span className={`status-badge ${user.status}`}>
-                      {user.status}
-                    </span>
-                  </td>
-
-                  <td className="action-buttons">
-                    <button
-                      className="btn-edit"
-                      onClick={() => handleEdit(user)}
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      className="btn-delete"
-                      onClick={() => deleteUser(user.id)}
-                    >
-                      Delete
-                    </button>
-
-                    <button
-                      className="btn-toggle"
-                      onClick={() => toggleStatus(user.id)}
-                    >
-                      {user.status === "active" ? "Deactivate" : "Activate"}
-                    </button>
-                  </td>
+              {loading ? (
+                <tr>
+                  <td colSpan="7">Loading users...</td>
                 </tr>
-              ))}
+              ) : currentUsers.length === 0 ? (
+                <tr>
+                  <td colSpan="7">No users found</td>
+                </tr>
+              ) : (
+                currentUsers.map((user) => (
+                  <tr key={user.id}>
+                    <td>{user.id}</td>
+
+                    <td>
+                      {user.username}
+                      {onlineSet.has(user.username) && (
+                        <span className="online-dot"></span>
+                      )}
+                    </td>
+
+                    <td>{user.email}</td>
+
+                    <td>
+                      <span className={`role-badge ${user.role || ""}`}>
+                        {user.role}
+                      </span>
+                    </td>
+
+                    <td>
+                      {user.department ? (
+                        <span className="dept-badge">{user.department}</span>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+
+                    <td>
+                      <span className={`status-badge ${user.status}`}>
+                        {user.status}
+                      </span>
+                    </td>
+
+                    <td className="action-buttons">
+                      <button
+                        className="btn-edit"
+                        onClick={() => handleEdit(user)}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        className="btn-delete"
+                        onClick={() => deleteUser(user.id)}
+                      >
+                        Delete
+                      </button>
+
+                      <button
+                        className="btn-toggle"
+                        onClick={() => toggleStatus(user.id)}
+                      >
+                        {user.status === "active" ? "Deactivate" : "Activate"}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -271,9 +296,9 @@ function Users() {
 
       {/* MODAL */}
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-box">
-            <h3>{isEditMode ? "Edit User" : "Create New User"}</h3>
+        <div className="modal-overlay" onClick={resetForm}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <h3>{isEditMode ? "Edit User" : "Create User"}</h3>
 
             <input
               type="text"
@@ -314,7 +339,6 @@ function Users() {
               <option value="admin">Admin</option>
             </select>
 
-            {/* 🔥 Dynamic Department */}
             <select
               value={formData.department}
               onChange={(e) =>
@@ -322,10 +346,8 @@ function Users() {
               }
             >
               <option value="">Select Department</option>
-              {DEPARTMENTS.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
+              {DEPARTMENTS.map((d) => (
+                <option key={d}>{d}</option>
               ))}
             </select>
 
@@ -343,7 +365,6 @@ function Users() {
               <button className="btn-cancel" onClick={resetForm}>
                 Cancel
               </button>
-
               <button className="btn-save" onClick={saveUser}>
                 {isEditMode ? "Update" : "Save"}
               </button>

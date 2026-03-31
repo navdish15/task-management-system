@@ -8,6 +8,12 @@ const EmployeeProjects = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [viewMode, setViewMode] = useState(false);
 
+  const [loading, setLoading] = useState(true);
+  const [submittingTaskId, setSubmittingTaskId] = useState(null);
+
+  const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
   const [selectedFiles, setSelectedFiles] = useState({});
   const [submissionText, setSubmissionText] = useState({});
 
@@ -18,9 +24,12 @@ const EmployeeProjects = () => {
     const loadProjects = async () => {
       try {
         const res = await api.get("/projects");
-        if (!ignore) setProjects(res.data);
+        if (!ignore) setProjects(res.data || []);
       } catch (error) {
-        console.error("Project load error:", error);
+        console.error(error);
+        setError("Failed to load projects");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -28,27 +37,39 @@ const EmployeeProjects = () => {
     return () => (ignore = true);
   }, []);
 
+  /* ================= AUTO CLEAR SUCCESS ================= */
+  useEffect(() => {
+    if (successMsg) {
+      const timer = setTimeout(() => setSuccessMsg(""), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMsg]);
+
   /* ================= VIEW PROJECT ================= */
   const handleViewProject = async (project) => {
     try {
+      setError("");
       const res = await api.get(`/projects/${project.id}`);
 
       setSelectedProject({
         ...res.data.project,
-        members: res.data.members,
-        tasks: res.data.tasks,
-        stats: res.data.stats,
+        members: res.data.members || [],
+        tasks: res.data.tasks || [],
+        stats: res.data.stats || {},
       });
 
       setViewMode(true);
     } catch (error) {
-      console.error("Project detail error:", error);
+      console.error(error);
+      setError("Failed to load project details");
     }
   };
 
   const handleBack = () => {
     setViewMode(false);
     setSelectedProject(null);
+    setError("");
+    setSuccessMsg("");
   };
 
   /* ================= SUBMIT WORK ================= */
@@ -57,7 +78,7 @@ const EmployeeProjects = () => {
     const text = submissionText[taskId];
 
     if (!file && !text) {
-      alert("Add file or text");
+      setError("Please add file or text before submitting");
       return;
     }
 
@@ -66,29 +87,49 @@ const EmployeeProjects = () => {
     if (text) formData.append("text", text);
 
     try {
+      setSubmittingTaskId(taskId);
+      setError("");
+      setSuccessMsg("");
+
       await api.post(`/tasks/employee/submit/${taskId}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      alert("Submitted successfully");
+      setSuccessMsg("Work submitted successfully ✅");
 
       // reload project
       const res = await api.get(`/projects/${selectedProject.id}`);
       setSelectedProject({
         ...res.data.project,
-        members: res.data.members,
-        tasks: res.data.tasks,
-        stats: res.data.stats,
+        members: res.data.members || [],
+        tasks: res.data.tasks || [],
+        stats: res.data.stats || {},
       });
+
+      // reset inputs
+      setSelectedFiles((prev) => ({ ...prev, [taskId]: null }));
+      setSubmissionText((prev) => ({ ...prev, [taskId]: "" }));
     } catch (err) {
       console.error(err);
+      setError("Submission failed. Try again.");
+    } finally {
+      setSubmittingTaskId(null);
     }
   };
+
+  /* ================= HELPERS ================= */
+
+  const formatStatus = (status) =>
+    status?.replace(/\s+/g, "").toLowerCase() || "pending";
+
+  const formatDate = (date) => date?.split("T")[0] || "-";
+
+  /* ================= RENDER ================= */
 
   return (
     <EmployeeLayout>
       <div className="admin-projects">
-        {/* ================= HEADER ================= */}
+        {/* HEADER */}
         <div className="projects-header">
           <h2>{viewMode ? "Project Details" : "My Projects"}</h2>
 
@@ -99,85 +140,80 @@ const EmployeeProjects = () => {
           )}
         </div>
 
+        {/* 🔥 FIXED MESSAGE HANDLING */}
+        {error ? (
+          <p className="error-msg">{error}</p>
+        ) : successMsg ? (
+          <p className="success-msg">{successMsg}</p>
+        ) : null}
+
+        {/* LOADING */}
+        {!viewMode && loading && <p>Loading projects...</p>}
+
         {/* ================= PROJECT DETAIL ================= */}
         {viewMode && selectedProject && (
           <div className="project-detail-card">
-            {/* TOP */}
             <div className="detail-top">
               <h3>{selectedProject.project_name}</h3>
 
               <span
-                className={`status-badge ${selectedProject.status.replace(" ", "")}`}
+                className={`status-badge ${formatStatus(selectedProject.status)}`}
               >
                 {selectedProject.status}
               </span>
             </div>
 
-            {/* DESC */}
             <p className="project-desc">{selectedProject.description}</p>
 
-            {/* INFO */}
             <div className="detail-info">
               <div>
-                <strong>Start:</strong>{" "}
-                {selectedProject.start_date?.split("T")[0]}
+                <strong>Start:</strong> {formatDate(selectedProject.start_date)}
               </div>
-
               <div>
-                <strong>Due:</strong> {selectedProject.due_date?.split("T")[0]}
+                <strong>Due:</strong> {formatDate(selectedProject.due_date)}
               </div>
-
               <div>
-                <strong>Members:</strong> {selectedProject.members?.length || 0}
+                <strong>Members:</strong> {selectedProject.members.length}
               </div>
-
               <div>
                 <strong>Total Tasks:</strong>{" "}
-                {selectedProject.stats?.totalTasks || 0}
+                {selectedProject.stats.totalTasks || 0}
               </div>
             </div>
 
-            {/* ================= PROGRESS ================= */}
-            {selectedProject.stats && (
-              <div className="progress-section">
-                <h4>Project Progress</h4>
+            {/* PROGRESS */}
+            <div className="progress-section">
+              <h4>Project Progress</h4>
 
-                <div className="progress-bar">
-                  <div
-                    className="progress-fill"
-                    style={{
-                      width: `${selectedProject.stats.progress}%`,
-                    }}
-                  ></div>
-                </div>
-
-                <p>{selectedProject.stats.progress}% Completed</p>
+              <div className="progress-bar">
+                <div
+                  className="progress-fill"
+                  style={{ width: `${selectedProject.stats.progress || 0}%` }}
+                />
               </div>
-            )}
 
-            {/* ================= TASKS ================= */}
+              <p>{selectedProject.stats.progress || 0}% Completed</p>
+            </div>
+
+            {/* TASKS */}
             <div className="task-section">
               <h4>Tasks</h4>
 
-              {selectedProject.tasks?.length === 0 ? (
-                <p>No tasks assigned yet.</p>
+              {selectedProject.tasks.length === 0 ? (
+                <p className="empty">🎉 No tasks assigned yet.</p>
               ) : (
                 selectedProject.tasks.map((task) => (
                   <div key={task.id} className="task-card">
-                    {/* TASK NAME */}
                     <h5>{task.task_name}</h5>
 
-                    {/* STATUS */}
                     <span
-                      className={`task-status ${task.status.replace(" ", "")}`}
+                      className={`task-status ${formatStatus(task.status)}`}
                     >
                       {task.status}
                     </span>
 
-                    {/* DESCRIPTION */}
                     <p className="project-desc">{task.description}</p>
 
-                    {/* FILE */}
                     <div className="task-meta">
                       <div>
                         <strong>File:</strong>{" "}
@@ -199,11 +235,11 @@ const EmployeeProjects = () => {
                       </div>
                     </div>
 
-                    {/* ================= SUBMIT UI ================= */}
                     {!task.submitted_file && (
                       <div className="submit-box">
                         <textarea
                           placeholder="Write your submission..."
+                          value={submissionText[task.id] || ""}
                           onChange={(e) =>
                             setSubmissionText((prev) => ({
                               ...prev,
@@ -213,6 +249,7 @@ const EmployeeProjects = () => {
                         />
 
                         <input
+                          key={task.id} /* 🔥 FIX reset file input */
                           type="file"
                           onChange={(e) =>
                             setSelectedFiles((prev) => ({
@@ -224,9 +261,12 @@ const EmployeeProjects = () => {
 
                         <button
                           className="task-submit-btn"
+                          disabled={submittingTaskId === task.id}
                           onClick={() => handleSubmit(task.id)}
                         >
-                          Submit Work
+                          {submittingTaskId === task.id
+                            ? "Submitting..."
+                            : "Submit Work"}
                         </button>
                       </div>
                     )}
@@ -238,7 +278,7 @@ const EmployeeProjects = () => {
         )}
 
         {/* ================= PROJECT LIST ================= */}
-        {!viewMode && (
+        {!viewMode && !loading && (
           <div className="projects-list">
             {projects.length === 0 ? (
               <div className="empty-state">
@@ -256,10 +296,7 @@ const EmployeeProjects = () => {
                     <h3>{project.project_name}</h3>
 
                     <span
-                      className={`status-badge ${project.status.replace(
-                        " ",
-                        "",
-                      )}`}
+                      className={`status-badge ${formatStatus(project.status)}`}
                     >
                       {project.status}
                     </span>
@@ -268,8 +305,8 @@ const EmployeeProjects = () => {
                   <p className="project-desc">{project.description}</p>
 
                   <div className="project-footer">
-                    📅 {project.start_date?.split("T")[0]} →{" "}
-                    {project.due_date?.split("T")[0]}
+                    📅 {formatDate(project.start_date)} →{" "}
+                    {formatDate(project.due_date)}
                   </div>
                 </div>
               ))

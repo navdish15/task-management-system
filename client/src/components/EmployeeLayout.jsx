@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "../services/api";
 import socket from "../services/socket";
 import logout from "../utils/logout";
@@ -10,7 +10,11 @@ function EmployeeLayout({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  const dropdownRef = useRef();
+
   const user = JSON.parse(localStorage.getItem("user"));
+
+  /* ================= FETCH + SOCKET ================= */
 
   useEffect(() => {
     if (!user?.username) return;
@@ -20,7 +24,7 @@ function EmployeeLayout({ children }) {
     const loadNotifications = async () => {
       try {
         const res = await api.get("/notifications");
-        setNotifications(res.data);
+        setNotifications(res.data || []);
       } catch (err) {
         console.error(err);
       }
@@ -31,7 +35,7 @@ function EmployeeLayout({ children }) {
     socket.on("newNotification", (data) => {
       setNotifications((prev) => [
         {
-          id: Date.now(),
+          id: `${Date.now()}-${Math.random()}`, // ✅ safer ID
           message: data.message,
           is_read: false,
         },
@@ -41,8 +45,29 @@ function EmployeeLayout({ children }) {
 
     return () => {
       socket.off("newNotification");
+      socket.emit("leaveRoom", user.username); // ✅ cleanup
     };
   }, [user?.username]);
+
+  /* ================= OUTSIDE CLICK ================= */
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener("click", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [showDropdown]);
+
+  /* ================= HELPERS ================= */
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -68,6 +93,8 @@ function EmployeeLayout({ children }) {
     }
   };
 
+  /* ================= RENDER ================= */
+
   return (
     <div>
       {/* ================= HEADER ================= */}
@@ -75,30 +102,21 @@ function EmployeeLayout({ children }) {
       <header className="employee-header">
         <h1>Employee Panel</h1>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          <div style={{ position: "relative", cursor: "pointer" }}>
+        <div className="header-actions">
+          {/* 🔔 Notification */}
+          <div className="notification-wrapper" ref={dropdownRef}>
             <span
-              style={{ fontSize: "22px" }}
-              onClick={() => setShowDropdown(!showDropdown)}
+              className="bell-icon"
+              onClick={(e) => {
+                e.stopPropagation(); // ✅ prevent instant close
+                setShowDropdown(!showDropdown);
+              }}
             >
               🔔
             </span>
 
             {unreadCount > 0 && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: "-8px",
-                  right: "-8px",
-                  background: "red",
-                  color: "white",
-                  borderRadius: "50%",
-                  padding: "2px 6px",
-                  fontSize: "12px",
-                }}
-              >
-                {unreadCount}
-              </span>
+              <span className="notification-badge">{unreadCount}</span>
             )}
 
             {showDropdown && (
@@ -118,7 +136,9 @@ function EmployeeLayout({ children }) {
                   {notifications.map((n) => (
                     <div
                       key={n.id}
-                      className={`notification-item ${!n.is_read ? "unread" : ""}`}
+                      className={`notification-item ${
+                        !n.is_read ? "unread" : ""
+                      }`}
                       onClick={() => markAsRead(n.id)}
                     >
                       <div className="notification-icon">
@@ -138,6 +158,7 @@ function EmployeeLayout({ children }) {
             )}
           </div>
 
+          {/* LOGOUT */}
           <button className="logout-btn" onClick={logout}>
             Logout
           </button>
@@ -152,7 +173,7 @@ function EmployeeLayout({ children }) {
         <NavLink to="/employee/projects">My Projects</NavLink>
       </aside>
 
-      {/* ================= MAIN CONTENT ================= */}
+      {/* ================= MAIN ================= */}
 
       <main className="employee-main">{children}</main>
 
@@ -162,7 +183,7 @@ function EmployeeLayout({ children }) {
         © {new Date().getFullYear()} TaskManager. All rights reserved.
       </footer>
 
-      {/* ================= FLOATING CHAT ================= */}
+      {/* ================= CHAT ================= */}
 
       {user && <FloatingChat currentUser={user} />}
     </div>
