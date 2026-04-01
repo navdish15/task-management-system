@@ -11,6 +11,7 @@ exports.getOrCreatePrivateChat = async (req, res) => {
   }
 
   try {
+    // Check existing chat
     const [existing] = await db.query(
       `
       SELECT c.id FROM chats c
@@ -19,6 +20,7 @@ exports.getOrCreatePrivateChat = async (req, res) => {
       WHERE c.type = 'private'
       AND m1.user_id = ?
       AND m2.user_id = ?
+      LIMIT 1
     `,
       [senderId, receiverId],
     );
@@ -27,12 +29,14 @@ exports.getOrCreatePrivateChat = async (req, res) => {
       return res.json({ chatId: existing[0].id });
     }
 
+    // Create chat
     const [chat] = await db.query(
       "INSERT INTO chats (type) VALUES ('private')",
     );
 
     const chatId = chat.insertId;
 
+    // Add members (UNIQUE constraint prevents duplicates)
     await db.query(
       "INSERT INTO chat_members (chat_id, user_id) VALUES (?, ?), (?, ?)",
       [chatId, senderId, chatId, receiverId],
@@ -45,7 +49,7 @@ exports.getOrCreatePrivateChat = async (req, res) => {
   }
 };
 
-/* ================= GET USER CHATS ================= */
+/* ================= GET USER CHATS (WITH LAST MESSAGE) ================= */
 
 exports.getUserChats = async (req, res) => {
   const userId = req.user.id;
@@ -53,10 +57,33 @@ exports.getUserChats = async (req, res) => {
   try {
     const [chats] = await db.query(
       `
-      SELECT c.id, c.type, c.created_at
+      SELECT 
+        c.id,
+        c.type,
+        c.created_at,
+
+        -- Last message
+        (
+          SELECT m.message 
+          FROM messages m 
+          WHERE m.chat_id = c.id 
+          ORDER BY m.created_at DESC 
+          LIMIT 1
+        ) AS lastMessage,
+
+        -- Last message time
+        (
+          SELECT m.created_at 
+          FROM messages m 
+          WHERE m.chat_id = c.id 
+          ORDER BY m.created_at DESC 
+          LIMIT 1
+        ) AS lastMessageTime
+
       FROM chats c
       JOIN chat_members cm ON c.id = cm.chat_id
       WHERE cm.user_id = ?
+      ORDER BY lastMessageTime DESC
     `,
       [userId],
     );
@@ -68,16 +95,20 @@ exports.getUserChats = async (req, res) => {
   }
 };
 
-/* ================= GET MESSAGES ================= */
+/* ================= GET MESSAGES (WITH PAGINATION) ================= */
 
 exports.getMessages = async (req, res) => {
   const { chatId } = req.params;
   const userId = req.user.id;
 
+  const page = parseInt(req.query.page) || 1;
+  const limit = 50;
+  const offset = (page - 1) * limit;
+
   try {
-    // ✅ SECURITY CHECK
+    // 🔒 ACCESS CHECK
     const [access] = await db.query(
-      `SELECT 1 FROM chat_members WHERE chat_id = ? AND user_id = ?`,
+      "SELECT 1 FROM chat_members WHERE chat_id = ? AND user_id = ?",
       [chatId, userId],
     );
 
@@ -92,19 +123,20 @@ exports.getMessages = async (req, res) => {
       JOIN users u ON m.sender_id = u.id
       WHERE m.chat_id = ?
       AND (m.deleted_for_everyone IS NULL OR m.deleted_for_everyone = 0)
-      ORDER BY m.created_at ASC
+      ORDER BY m.created_at DESC
+      LIMIT ? OFFSET ?
     `,
-      [chatId],
+      [chatId, limit, offset],
     );
 
-    res.json(messages);
+    res.json(messages.reverse()); // keep UI ASC
   } catch (err) {
     console.error("Get messages error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-/* ================= SEND MESSAGE (REST BACKUP) ================= */
+/* ================= SEND MESSAGE ================= */
 
 exports.sendMessage = async (req, res) => {
   const { chatId, message } = req.body;
@@ -117,6 +149,16 @@ exports.sendMessage = async (req, res) => {
   }
 
   try {
+    // 🔒 ACCESS CHECK (CRITICAL FIX)
+    const [access] = await db.query(
+      "SELECT 1 FROM chat_members WHERE chat_id = ? AND user_id = ?",
+      [chatId, senderId],
+    );
+
+    if (!access.length) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
     const [result] = await db.query(
       "INSERT INTO messages (chat_id, sender_id, message) VALUES (?, ?, ?)",
       [chatId, senderId, cleanMessage],
@@ -190,7 +232,6 @@ exports.deleteMessage = async (req, res) => {
       });
     }
 
-    // ✅ SOFT DELETE (matches socket system)
     await db.query(
       "UPDATE messages SET deleted_for_everyone = 1 WHERE id = ?",
       [id],

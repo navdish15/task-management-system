@@ -7,18 +7,35 @@ const multer = require("multer");
 const path = require("path");
 const { createNotification } = require("../utils/notificationService");
 
-/* ================= MULTER ================= */
+/* ================= MULTER (SECURE) ================= */
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, path.join(__dirname, "../uploads"));
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
+    const safeName = file.originalname
+      .replace(/\s+/g, "_")
+      .replace(/[^\w.-]/g, "");
+    cb(null, Date.now() + "-" + safeName);
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const allowed = [
+      "image/jpeg",
+      "image/png",
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error("Invalid file type"), false);
+  },
+});
 
 /* ========================================================= */
 /* ================= ADMIN: ASSIGN TASK ==================== */
@@ -43,9 +60,7 @@ router.post(
       const file = req.file ? req.file.filename : null;
 
       if (!project_id) {
-        return res.status(400).json({
-          message: "Project ID is required",
-        });
+        return res.status(400).json({ message: "Project ID is required" });
       }
 
       if (!employee_username || !task_name) {
@@ -81,7 +96,7 @@ router.post(
 
       res.json({ message: "Task assigned successfully" });
     } catch (err) {
-      console.error(err);
+      console.error("Assign task error:", err);
       res.status(500).json({ message: "Server error" });
     }
   },
@@ -99,10 +114,6 @@ router.put(
     const { taskId } = req.params;
 
     try {
-      await db.query("UPDATE tasks SET status = 'Completed' WHERE id = ?", [
-        taskId,
-      ]);
-
       const [task] = await db.query(
         "SELECT project_id, employee_username FROM tasks WHERE id = ?",
         [taskId],
@@ -112,8 +123,11 @@ router.put(
         return res.status(404).json({ message: "Task not found" });
       }
 
+      await db.query("UPDATE tasks SET status = 'Completed' WHERE id = ?", [
+        taskId,
+      ]);
+
       const projectId = task[0].project_id;
-      const empUsername = task[0].employee_username;
 
       const [tasks] = await db.query(
         "SELECT status FROM tasks WHERE project_id = ?",
@@ -121,7 +135,6 @@ router.put(
       );
 
       const allCompleted = tasks.every((t) => t.status === "Completed");
-
       const anyStarted = tasks.some(
         (t) =>
           t.status === "In Progress" ||
@@ -130,7 +143,6 @@ router.put(
       );
 
       let projectStatus = "Pending";
-
       if (allCompleted) projectStatus = "Completed";
       else if (anyStarted) projectStatus = "In Progress";
 
@@ -139,9 +151,9 @@ router.put(
         projectId,
       ]);
 
-      /* 🔔 NOTIFICATION (Employee) */
+      /* 🔔 NOTIFY EMPLOYEE */
       const [user] = await db.query("SELECT id FROM users WHERE username = ?", [
-        empUsername,
+        task[0].employee_username,
       ]);
 
       if (user.length) {
@@ -156,7 +168,7 @@ router.put(
         projectStatus,
       });
     } catch (err) {
-      console.error(err);
+      console.error("Approve error:", err);
       res.status(500).json({ message: "Server error" });
     }
   },
@@ -174,32 +186,34 @@ router.put(
     const { taskId } = req.params;
 
     try {
-      await db.query("UPDATE tasks SET status = 'In Progress' WHERE id = ?", [
-        taskId,
-      ]);
-
       const [task] = await db.query(
         "SELECT employee_username FROM tasks WHERE id = ?",
         [taskId],
       );
 
-      if (task.length) {
-        const [user] = await db.query(
-          "SELECT id FROM users WHERE username = ?",
-          [task[0].employee_username],
-        );
+      if (!task.length) {
+        return res.status(404).json({ message: "Task not found" });
+      }
 
-        if (user.length) {
-          await createNotification(
-            user[0].id,
-            `Your task (ID: ${taskId}) was rejected ❌`,
-          );
-        }
+      await db.query("UPDATE tasks SET status = 'In Progress' WHERE id = ?", [
+        taskId,
+      ]);
+
+      const [user] = await db.query("SELECT id FROM users WHERE username = ?", [
+        task[0].employee_username,
+      ]);
+
+      if (user.length) {
+        await createNotification(
+          user[0].id,
+          `Your task (ID: ${taskId}) was rejected ❌`,
+        );
       }
 
       res.json({ message: "Task rejected" });
     } catch (err) {
-      res.status(500).json({ message: "Error rejecting task" });
+      console.error("Reject error:", err);
+      res.status(500).json({ message: "Server error" });
     }
   },
 );
@@ -225,28 +239,32 @@ router.post(
         return res.status(400).json({ message: "No submission" });
       }
 
-      await db.query(
+      const [result] = await db.query(
         `UPDATE tasks 
         SET submitted_file=?, submission_text=?, status='Submitted'
         WHERE id=? AND employee_username=?`,
         [file, text, taskId, username],
       );
 
-      /* 🔔 NOTIFICATION (Admin) */
-      const [admin] = await db.query(
-        "SELECT id FROM users WHERE role = 'admin' LIMIT 1",
+      if (result.affectedRows === 0) {
+        return res.status(403).json({ message: "Not allowed" });
+      }
+
+      /* 🔔 NOTIFY ALL ADMINS */
+      const [admins] = await db.query(
+        "SELECT id FROM users WHERE role = 'admin'",
       );
 
-      if (admin.length) {
+      for (const admin of admins) {
         await createNotification(
-          admin[0].id,
+          admin.id,
           `Employee ${username} submitted work for task ID ${taskId}`,
         );
       }
 
       res.json({ message: "Submitted successfully" });
     } catch (err) {
-      console.error(err);
+      console.error("Submission error:", err);
       res.status(500).json({ message: "Server error" });
     }
   },
@@ -264,7 +282,10 @@ router.get(
     db.query(
       "SELECT * FROM tasks WHERE project_id IS NULL ORDER BY deadline ASC",
       (err, result) => {
-        if (err) return res.status(500).json(err);
+        if (err) {
+          console.error("Fetch normal tasks error:", err);
+          return res.status(500).json({ message: "Server error" });
+        }
         res.json(result);
       },
     );

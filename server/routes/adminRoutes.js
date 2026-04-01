@@ -11,10 +11,16 @@ const logAction = require("../utils/auditLogger");
 const query = (sql, params = []) =>
   new Promise((resolve, reject) => {
     db.query(sql, params, (err, result) => {
-      if (err) reject(err);
-      else resolve(result);
+      if (err) {
+        console.error("DB ERROR:", err);
+        reject(err);
+      } else resolve(result);
     });
   });
+
+/* ================= HELPERS ================= */
+
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 /* ================= DASHBOARD ================= */
 
@@ -33,13 +39,13 @@ router.get(
         ]);
 
       res.json({
-        totalTasks: totalTasks[0].total,
-        pendingTasks: pendingTasks[0].total,
-        completedTasks: completedTasks[0].total,
-        totalEmployees: employees[0].total,
+        totalTasks: totalTasks[0].total || 0,
+        pendingTasks: pendingTasks[0].total || 0,
+        completedTasks: completedTasks[0].total || 0,
+        totalEmployees: employees[0].total || 0,
       });
     } catch (err) {
-      console.error(err);
+      console.error("Dashboard error:", err);
       res.status(500).json({ message: "Dashboard error" });
     }
   },
@@ -50,17 +56,25 @@ router.get(
 router.get("/users", verifyToken, authorizeRoles("admin"), async (req, res) => {
   try {
     const search = req.query.search || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10;
+    const offset = (page - 1) * limit;
+
     let sql = "SELECT id, username, email, role, department, status FROM users";
     let params = [];
 
     if (search) {
       sql += " WHERE username LIKE ? OR email LIKE ?";
-      params = [`%${search}%`, `%${search}%`];
+      params.push(`%${search}%`, `%${search}%`);
     }
+
+    sql += " LIMIT ? OFFSET ?";
+    params.push(limit, offset);
 
     const result = await query(sql, params);
     res.json(result);
   } catch (err) {
+    console.error("Users fetch error:", err);
     res.status(500).json({ message: "Error fetching users" });
   }
 });
@@ -79,7 +93,10 @@ router.post(
         return res.status(400).json({ message: "All fields required" });
       }
 
-      // 🔥 Duplicate email check
+      if (!isValidEmail(email)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+
       const existing = await query("SELECT id FROM users WHERE email=?", [
         email,
       ]);
@@ -101,6 +118,7 @@ router.post(
 
       res.json({ message: "User created successfully" });
     } catch (err) {
+      console.error("Create user error:", err);
       res.status(500).json({ message: "Error creating user" });
     }
   },
@@ -117,12 +135,25 @@ router.put(
       const { username, email, role, department, status } = req.body;
       const userId = req.params.id;
 
+      if (!isValidEmail(email)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+
+      // 🔥 Duplicate email check (exclude current user)
+      const existing = await query(
+        "SELECT id FROM users WHERE email=? AND id != ?",
+        [email, userId],
+      );
+
+      if (existing.length > 0) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+
       const result = await query(
         `UPDATE users SET username=?, email=?, role=?, department=?, status=? WHERE id=?`,
         [username, email, role, department, status, userId],
       );
 
-      // 🔥 Check user exists
       if (result.affectedRows === 0) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -136,6 +167,7 @@ router.put(
 
       res.json({ message: "User updated successfully" });
     } catch (err) {
+      console.error("Update user error:", err);
       res.status(500).json({ message: "Error updating user" });
     }
   },
@@ -166,6 +198,7 @@ router.delete(
 
       res.json({ message: "User deleted successfully" });
     } catch (err) {
+      console.error("Delete user error:", err);
       res.status(500).json({ message: "Error deleting user" });
     }
   },
@@ -183,15 +216,14 @@ router.put(
 
       const result = await query(
         `UPDATE users 
-       SET status = CASE 
-         WHEN status = 'active' THEN 'inactive'
-         ELSE 'active'
-       END
-       WHERE id=?`,
+         SET status = CASE 
+           WHEN status = 'active' THEN 'inactive'
+           ELSE 'active'
+         END
+         WHERE id=?`,
         [userId],
       );
 
-      // 🔥 Check user exists
       if (result.affectedRows === 0) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -205,6 +237,7 @@ router.put(
 
       res.json({ message: "Status updated" });
     } catch (err) {
+      console.error("Toggle status error:", err);
       res.status(500).json({ message: "Error updating status" });
     }
   },
@@ -223,6 +256,7 @@ router.get(
       );
       res.json(result);
     } catch (err) {
+      console.error("Employees fetch error:", err);
       res.status(500).json({ message: "Error fetching employees" });
     }
   },
@@ -248,55 +282,55 @@ router.get(
         query(`SELECT status, COUNT(*) as count FROM tasks GROUP BY status`),
 
         query(`
-        SELECT 
-          DATE_FORMAT(assigned_at, '%Y-%m') as month,
-          COUNT(*) as assigned,
-          SUM(CASE WHEN status IN ('Completed','Approved') THEN 1 ELSE 0 END) as completed
-        FROM tasks
-        GROUP BY month
-        ORDER BY month ASC
-      `),
+          SELECT 
+            DATE_FORMAT(assigned_at, '%Y-%m') as month,
+            COUNT(*) as assigned,
+            SUM(CASE WHEN status IN ('Completed','Approved') THEN 1 ELSE 0 END) as completed
+          FROM tasks
+          GROUP BY month
+          ORDER BY month ASC
+        `),
 
         query(`
-        SELECT task_name, employee_username, deadline
-        FROM tasks
-        WHERE deadline >= NOW()
-        ORDER BY deadline ASC
-        LIMIT 5
-      `),
+          SELECT task_name, employee_username, deadline
+          FROM tasks
+          WHERE deadline >= NOW()
+          ORDER BY deadline ASC
+          LIMIT 5
+        `),
 
         query(`
-        SELECT employee_username, COUNT(*) as completed
-        FROM tasks
-        WHERE status = 'Completed'
-        GROUP BY employee_username
-        ORDER BY completed DESC
-        LIMIT 1
-      `),
+          SELECT employee_username, COUNT(*) as completed
+          FROM tasks
+          WHERE status = 'Completed'
+          GROUP BY employee_username
+          ORDER BY completed DESC
+          LIMIT 1
+        `),
 
         query(`
-        SELECT task_name, employee_username, deadline
-        FROM tasks
-        WHERE deadline < NOW() AND status != 'Completed'
-        ORDER BY deadline ASC
-      `),
+          SELECT task_name, employee_username, deadline
+          FROM tasks
+          WHERE deadline < NOW() AND status != 'Completed'
+          ORDER BY deadline ASC
+        `),
 
         query(`
-        SELECT 
-          COUNT(*) as total,
-          SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed,
-          SUM(CASE WHEN status != 'Completed' THEN 1 ELSE 0 END) as active
-        FROM projects
-      `),
+          SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed,
+            SUM(CASE WHEN status != 'Completed' THEN 1 ELSE 0 END) as active
+          FROM projects
+        `),
 
         query(`
-        SELECT 
-          employee_username,
-          COUNT(*) as assigned,
-          SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed
-        FROM tasks
-        GROUP BY employee_username
-      `),
+          SELECT 
+            employee_username,
+            COUNT(*) as assigned,
+            SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed
+          FROM tasks
+          GROUP BY employee_username
+        `),
       ]);
 
       res.json({
@@ -309,7 +343,7 @@ router.get(
         employeePerformance: empResult,
       });
     } catch (err) {
-      console.error(err);
+      console.error("Analytics error:", err);
       res.status(500).json({ message: "Analytics error" });
     }
   },
@@ -323,13 +357,21 @@ router.get(
   authorizeRoles("admin"),
   async (req, res) => {
     try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = 20;
+      const offset = (page - 1) * limit;
+
       const result = await query(
         `SELECT id, action, performed_by, role, created_at 
-       FROM audit_logs 
-       ORDER BY created_at DESC`,
+         FROM audit_logs 
+         ORDER BY created_at DESC
+         LIMIT ? OFFSET ?`,
+        [limit, offset],
       );
+
       res.json(result);
     } catch (err) {
+      console.error("Audit logs error:", err);
       res.status(500).json({ message: "Error fetching logs" });
     }
   },

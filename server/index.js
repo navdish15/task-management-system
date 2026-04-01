@@ -4,6 +4,7 @@ const path = require("path");
 const http = require("http");
 const { Server } = require("socket.io");
 
+require("dotenv").config();
 require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");

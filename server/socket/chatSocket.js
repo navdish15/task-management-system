@@ -13,17 +13,28 @@ module.exports = (io, socket) => {
     socket.leave(`chat_${chatId}`);
   });
 
+  /* ================= HELPER: CHECK MEMBERSHIP ================= */
+  const isUserInChat = async (chatId, userId) => {
+    const [rows] = await db.query(
+      "SELECT 1 FROM chat_members WHERE chat_id=? AND user_id=?",
+      [chatId, userId],
+    );
+    return rows.length > 0;
+  };
+
   /* ================= SEND MESSAGE ================= */
   socket.on("send_message", async (data) => {
     const { chatId, senderId, message, file_url, file_name } = data;
 
     const cleanMessage = message?.trim();
 
-    // ✅ validation
     if (!chatId || !senderId) return;
     if (!cleanMessage && !file_url) return;
 
     try {
+      // 🔒 membership check
+      if (!(await isUserInChat(chatId, senderId))) return;
+
       const [result] = await db.query(
         `INSERT INTO messages 
         (chat_id, sender_id, message, file_url, file_name, is_read) 
@@ -37,7 +48,6 @@ module.exports = (io, socket) => {
         ],
       );
 
-      /* ✅ fetch inserted message (correct timestamp) */
       const [rows] = await db.query(`SELECT * FROM messages WHERE id = ?`, [
         result.insertId,
       ]);
@@ -61,17 +71,32 @@ module.exports = (io, socket) => {
 
   /* ================= EDIT MESSAGE ================= */
   socket.on("edit_message", async (data) => {
-    const { id, message, chatId } = data;
+    const { id, message, chatId, requesterId } = data;
 
     const cleanMessage = message?.trim();
-
-    if (!id || !cleanMessage) return;
+    if (!id || !cleanMessage || !requesterId) return;
 
     try {
+      const [msgRows] = await db.query(
+        "SELECT sender_id FROM messages WHERE id = ?",
+        [id],
+      );
+      if (!msgRows.length) return;
+
+      const senderId = msgRows[0].sender_id;
+
+      const [userRows] = await db.query("SELECT role FROM users WHERE id = ?", [
+        requesterId,
+      ]);
+      if (!userRows.length) return;
+
+      const role = userRows[0].role;
+
+      // 🔒 permission check
+      if (requesterId !== senderId && role !== "admin") return;
+
       await db.query(
-        `UPDATE messages 
-         SET message = ?, edited = 1 
-         WHERE id = ?`,
+        `UPDATE messages SET message = ?, edited = 1 WHERE id = ?`,
         [cleanMessage, id],
       );
 
@@ -98,7 +123,6 @@ module.exports = (io, socket) => {
         `SELECT sender_id FROM messages WHERE id = ?`,
         [id],
       );
-
       if (!rows.length) return;
 
       const senderId = rows[0].sender_id;
@@ -106,18 +130,14 @@ module.exports = (io, socket) => {
       const [users] = await db.query(`SELECT role FROM users WHERE id = ?`, [
         requesterId,
       ]);
-
       if (!users.length) return;
 
       const role = users[0].role;
 
-      // ✅ permission check
       if (requesterId !== senderId && role !== "admin") return;
 
       await db.query(
-        `UPDATE messages 
-         SET deleted_for_everyone = 1 
-         WHERE id = ?`,
+        `UPDATE messages SET deleted_for_everyone = 1 WHERE id = ?`,
         [id],
       );
 
@@ -138,7 +158,6 @@ module.exports = (io, socket) => {
         `SELECT deleted_by FROM messages WHERE id = ?`,
         [id],
       );
-
       if (!rows.length) return;
 
       let deletedBy = rows[0].deleted_by || "";
@@ -148,12 +167,10 @@ module.exports = (io, socket) => {
         arr.push(String(userId));
       }
 
-      await db.query(
-        `UPDATE messages 
-         SET deleted_by = ? 
-         WHERE id = ?`,
-        [arr.join(","), id],
-      );
+      await db.query(`UPDATE messages SET deleted_by = ? WHERE id = ?`, [
+        arr.join(","),
+        id,
+      ]);
 
       socket.emit("message_deleted_for_me", id);
     } catch (err) {
@@ -168,6 +185,8 @@ module.exports = (io, socket) => {
     if (!chatId || !readerId) return;
 
     try {
+      if (!(await isUserInChat(chatId, readerId))) return;
+
       await db.query(
         `UPDATE messages 
          SET is_read = 1 
@@ -185,10 +204,12 @@ module.exports = (io, socket) => {
   });
 
   /* ================= TYPING ================= */
-  socket.on("typing", (data) => {
+  socket.on("typing", async (data) => {
     const { chatId, senderId } = data;
 
     if (!chatId || !senderId) return;
+
+    if (!(await isUserInChat(chatId, senderId))) return;
 
     socket.to(`chat_${chatId}`).emit("user_typing", {
       chatId,

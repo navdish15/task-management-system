@@ -167,39 +167,93 @@ router.get("/:id", verifyToken, (req, res) => {
   });
 });
 
-/* =====================================================
-   4️⃣ UPDATE PROJECT
-===================================================== */
+/* ===== UPDATE PROJECT ===== */
 router.put("/:id", verifyToken, (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
   const projectId = req.params.id;
   const { project_name, description, start_date, due_date, members } = req.body;
+
+  if (!project_name || !description || !start_date || !due_date) {
+    return res.status(400).json({ message: "All fields required" });
+  }
 
   db.query(
     `UPDATE projects 
      SET project_name=?, description=?, start_date=?, due_date=? 
      WHERE id=?`,
     [project_name, description, start_date, due_date, projectId],
-    () => {
-      db.query(`DELETE FROM project_members WHERE project_id=?`, [projectId]);
-
-      const values = members.map((m) => [projectId, m]);
+    (err) => {
+      if (err) {
+        console.error("Update error:", err);
+        return res.status(500).json({ message: "Server error" });
+      }
 
       db.query(
-        `INSERT INTO project_members (project_id, employee_id) VALUES ?`,
-        [values],
-        () => res.json({ message: "Updated" }),
+        `DELETE FROM project_members WHERE project_id=?`,
+        [projectId],
+        (err) => {
+          if (err) {
+            console.error("Delete members error:", err);
+            return res.status(500).json({ message: "Server error" });
+          }
+
+          const values = members.map((m) => [projectId, m]);
+
+          db.query(
+            `INSERT INTO project_members (project_id, employee_id) VALUES ?`,
+            [values],
+            (err) => {
+              if (err) {
+                console.error("Insert members error:", err);
+                return res.status(500).json({ message: "Server error" });
+              }
+
+              res.json({ message: "Updated successfully" });
+            },
+          );
+        },
       );
     },
   );
 });
 
-/* =====================================================
-   5️⃣ DELETE PROJECT
-===================================================== */
+/* ===== DELETE PROJECT ===== */
 router.delete("/:id", verifyToken, (req, res) => {
-  db.query("DELETE FROM projects WHERE id=?", [req.params.id], () => {
-    res.json({ message: "Deleted" });
-  });
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  const projectId = req.params.id;
+
+  db.query(
+    "DELETE FROM project_members WHERE project_id=?",
+    [projectId],
+    (err) => {
+      if (err) {
+        console.error("Delete members error:", err);
+        return res.status(500).json({ message: "Server error" });
+      }
+
+      db.query("DELETE FROM tasks WHERE project_id=?", [projectId], (err) => {
+        if (err) {
+          console.error("Delete tasks error:", err);
+          return res.status(500).json({ message: "Server error" });
+        }
+
+        db.query("DELETE FROM projects WHERE id=?", [projectId], (err) => {
+          if (err) {
+            console.error("Delete project error:", err);
+            return res.status(500).json({ message: "Server error" });
+          }
+
+          res.json({ message: "Deleted successfully" });
+        });
+      });
+    },
+  );
 });
 
 module.exports = router;

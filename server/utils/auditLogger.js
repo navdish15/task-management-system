@@ -1,16 +1,24 @@
 const { pool: db } = require("../config/db");
 
+/* ================= AUDIT LOGGER ================= */
+
 const logAction = (action, performedBy, role, req = null) => {
-  console.log("AUDIT LOG CALLED:", action, performedBy, role);
+  try {
+    if (!action || !performedBy || !role) {
+      console.warn("⚠ Missing audit log fields");
+      return;
+    }
 
-  const sql =
-    "INSERT INTO audit_logs (action, performed_by, role) VALUES (?, ?, ?)";
+    console.log("AUDIT LOG CALLED:", action, performedBy, role);
 
-  db.query(sql, [action, performedBy, role], (err, result) => {
-    if (err) {
-      console.error("Audit log error:", err);
-    } else {
-      console.log("Audit log inserted successfully");
+    const sql =
+      "INSERT INTO audit_logs (action, performed_by, role) VALUES (?, ?, ?)";
+
+    db.query(sql, [action, performedBy, role], (err, result) => {
+      if (err) {
+        console.error("Audit log DB error:", err);
+        return;
+      }
 
       const newLog = {
         id: result.insertId,
@@ -20,15 +28,25 @@ const logAction = (action, performedBy, role, req = null) => {
         created_at: new Date(),
       };
 
-      // 🔥 REAL-TIME EMIT
-      if (req) {
-        const io = req.app.get("io");
-        if (io) {
-          io.emit("new_log", newLog);
+      console.log("Audit log inserted successfully");
+
+      /* ================= REAL-TIME EMIT ================= */
+
+      try {
+        if (req && req.app) {
+          const io = req.app.get("io");
+
+          if (io) {
+            io.emit("new_log", newLog);
+          }
         }
+      } catch (socketErr) {
+        console.error("Socket emit error:", socketErr);
       }
-    }
-  });
+    });
+  } catch (err) {
+    console.error("Audit logger crash:", err);
+  }
 };
 
 module.exports = logAction;
