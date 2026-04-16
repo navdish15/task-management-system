@@ -5,11 +5,11 @@ import "../../assets/tasks.css";
 
 function Tasks() {
   const [tasks, setTasks] = useState([]);
-  const [employees, setEmployees] = useState([]);
+  const [filteredEmployees, setFilteredEmployees] = useState([]);
+  const [selectedDept, setSelectedDept] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
 
-  // ✅ SAFE localStorage (fixed)
   let user = null;
   try {
     user = JSON.parse(localStorage.getItem("user"));
@@ -27,22 +27,6 @@ function Tasks() {
     priority: "Low",
   });
 
-  /* ================= FETCH EMPLOYEES ================= */
-
-  useEffect(() => {
-    if (!token) return;
-
-    axios
-      .get("http://localhost:5000/api/admin/employees", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setEmployees(res.data))
-      .catch((err) => {
-        console.error(err);
-        alert("Failed to load employees");
-      });
-  }, [token]);
-
   /* ================= FETCH TASKS ================= */
 
   const fetchTasks = useCallback(() => {
@@ -53,15 +37,33 @@ function Tasks() {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setTasks(res.data))
-      .catch((err) => {
-        console.error(err);
-        alert("Failed to load tasks");
-      });
+      .catch(() => alert("Failed to load tasks"));
   }, [token]);
 
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
+
+  /* ================= DEPARTMENT CHANGE ================= */
+
+  const handleDeptChange = (e) => {
+    const dept = e.target.value;
+    setSelectedDept(dept);
+
+    setFormData({
+      ...formData,
+      employee_username: "",
+    });
+
+    if (!dept) return;
+
+    axios
+      .get(`http://localhost:5000/api/admin/employees/${dept}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => setFilteredEmployees(res.data))
+      .catch(() => alert("Failed to load employees"));
+  };
 
   /* ================= ASSIGN TASK ================= */
 
@@ -102,11 +104,13 @@ function Tasks() {
         priority: "Low",
       });
 
+      setSelectedDept("");
+      setFilteredEmployees([]);
       setSelectedFile(null);
+
       fetchTasks();
-      alert("Task assigned successfully"); // ✅ feedback
-    } catch (err) {
-      console.error(err);
+      alert("Task assigned successfully");
+    } catch {
       alert("Failed to assign task");
     }
   };
@@ -120,11 +124,8 @@ function Tasks() {
       await axios.delete(`http://localhost:5000/api/tasks/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       fetchTasks();
-      alert("Task deleted");
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert("Failed to delete task");
     }
   };
@@ -139,9 +140,7 @@ function Tasks() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       fetchTasks();
-      alert("Task approved");
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert("Failed to approve task");
     }
   };
@@ -154,9 +153,7 @@ function Tasks() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       fetchTasks();
-      alert("Task rejected");
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert("Failed to reject task");
     }
   };
@@ -173,9 +170,8 @@ function Tasks() {
 
       setEditingTask(null);
       fetchTasks();
-      alert("Task updated");
-    } catch (err) {
-      console.error(err);
+      alert("Task updated successfully");
+    } catch {
       alert("Failed to update task");
     }
   };
@@ -188,6 +184,19 @@ function Tasks() {
           <h2>Assign Task</h2>
 
           <div className="task-grid">
+            {/* Department */}
+            <div className="form-group">
+              <label>Department</label>
+              <select value={selectedDept} onChange={handleDeptChange}>
+                <option value="">Select Department</option>
+                <option value="HR">HR</option>
+                <option value="Software">Software</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Sales">Sales</option>
+              </select>
+            </div>
+
+            {/* Employee */}
             <div className="form-group">
               <label>Employee</label>
               <select
@@ -198,9 +207,10 @@ function Tasks() {
                     employee_username: e.target.value,
                   })
                 }
+                disabled={!selectedDept}
               >
                 <option value="">Select Employee</option>
-                {employees.map((emp) => (
+                {filteredEmployees.map((emp) => (
                   <option key={emp.username} value={emp.username}>
                     {emp.username}
                   </option>
@@ -208,6 +218,7 @@ function Tasks() {
               </select>
             </div>
 
+            {/* Task Name */}
             <div className="form-group">
               <label>Task Name</label>
               <input
@@ -219,6 +230,7 @@ function Tasks() {
               />
             </div>
 
+            {/* Deadline */}
             <div className="form-group">
               <label>Deadline</label>
               <input
@@ -230,6 +242,7 @@ function Tasks() {
               />
             </div>
 
+            {/* Priority */}
             <div className="form-group">
               <label>Priority</label>
               <select
@@ -245,6 +258,7 @@ function Tasks() {
             </div>
           </div>
 
+          {/* Description */}
           <div className="form-group full-width">
             <label>Description</label>
             <textarea
@@ -256,6 +270,7 @@ function Tasks() {
             />
           </div>
 
+          {/* File */}
           <div className="form-group full-width">
             <label>Attach File (Optional)</label>
             <input
@@ -313,41 +328,13 @@ function Tasks() {
                     </td>
 
                     <td>
-                      <span
-                        className={`status-badge ${task.status.replace(" ", "-")}`}
-                      >
+                      <span className={`status-badge ${task.status}`}>
                         {task.status}
                       </span>
                     </td>
 
-                    <td>
-                      {task.uploaded_file ? (
-                        <a
-                          href={`http://localhost:5000/uploads/${task.uploaded_file}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          View
-                        </a>
-                      ) : (
-                        "No File"
-                      )}
-                    </td>
-
-                    <td>
-                      {task.submitted_file ? (
-                        <a
-                          href={`http://localhost:5000/uploads/${task.submitted_file}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          View
-                        </a>
-                      ) : (
-                        "No Submission"
-                      )}
-                    </td>
-
+                    <td>{task.uploaded_file ? "View" : "No File"}</td>
+                    <td>{task.submitted_file ? "View" : "No Submission"}</td>
                     <td>{task.submission_text || "—"}</td>
 
                     <td>
@@ -396,7 +383,8 @@ function Tasks() {
           </table>
         </div>
 
-        {/* EDIT MODAL */}
+        {/* ================= EDIT MODAL ================= */}
+
         {editingTask && (
           <div className="modal">
             <div className="modal-content">
@@ -442,6 +430,7 @@ function Tasks() {
                 <button className="btn-save" onClick={updateTask}>
                   Save
                 </button>
+
                 <button
                   className="btn-cancel"
                   onClick={() => setEditingTask(null)}

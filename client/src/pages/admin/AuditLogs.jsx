@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../../services/api";
 import AdminLayout from "../../components/AdminLayout";
-import socket from "../../socket";
+import socket from "../../services/socket";
 import "../../assets/auditLogs.css";
 
 function AuditLogs() {

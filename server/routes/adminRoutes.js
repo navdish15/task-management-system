@@ -377,4 +377,23 @@ router.get(
   },
 );
 
+router.get("/employees/:department", (req, res) => {
+  const { department } = req.params;
+
+  const query = `
+    SELECT username, name 
+    FROM users 
+    WHERE role = 'employee' AND department = ?
+  `;
+
+  db.query(query, [department], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Database error" });
+    }
+
+    res.json(result);
+  });
+});
+
 module.exports = router;

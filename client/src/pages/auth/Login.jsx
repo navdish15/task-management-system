@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
+import socket from "../../services/socket";
 import "../../assets/login.css";
 
 function Login() {
@@ -30,6 +31,13 @@ function Login() {
         };
 
         localStorage.setItem("user", JSON.stringify(userData));
+
+        // ✅ SEND TOKEN + CONNECT SOCKET
+        socket.auth = {
+          token: res.data.token,
+        };
+
+        socket.connect();
 
         // Redirect based on role
         if (res.data.role === "admin") {
