@@ -338,19 +338,25 @@ function Tasks() {
                     <td>{task.submission_text || "—"}</td>
 
                     <td>
-                      <button
-                        className="btn-edit"
-                        onClick={() => setEditingTask(task)}
-                      >
-                        Edit
-                      </button>
+                      {task.status === "Completed" ? (
+                        <span className="done-badge">Done ✔</span>
+                      ) : (
+                        <>
+                          <button
+                            className="btn-edit"
+                            onClick={() => setEditingTask(task)}
+                          >
+                            Edit
+                          </button>
 
-                      <button
-                        className="btn-delete"
-                        onClick={() => deleteTask(task.id)}
-                      >
-                        Delete
-                      </button>
+                          <button
+                            className="btn-delete"
+                            onClick={() => deleteTask(task.id)}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
                     </td>
 
                     <td>

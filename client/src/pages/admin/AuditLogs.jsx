@@ -39,10 +39,9 @@ function AuditLogs() {
     /* ================= SOCKET ================= */
     const handleNewLog = (newLog) => {
       setLogs((prev) => [newLog, ...prev]);
-      setCurrentPage(1); // 🔥 always show latest
+      setCurrentPage(1);
     };
 
-    // ✅ prevent duplicate listeners
     socket.off("new_log", handleNewLog);
     socket.on("new_log", handleNewLog);
 
@@ -88,9 +87,16 @@ function AuditLogs() {
     indexOfLastLog,
   );
 
+  /* ================= HASH FUNCTION ================= */
+  const generateHash = (log) => {
+    return btoa(
+      `${log.id}|${log.action}|${log.performed_by}|${log.role}|${log.created_at}`,
+    );
+  };
+
   /* ================= EXPORT ================= */
   const exportCSV = () => {
-    const headers = ["ID", "Action", "User", "Role", "Timestamp"];
+    const headers = ["ID", "Action", "User", "Role", "Timestamp", "Hash"];
 
     const rows = filteredLogs.map((log) => [
       log.id,
@@ -98,6 +104,7 @@ function AuditLogs() {
       log.performed_by,
       log.role,
       log.created_at,
+      generateHash(log),
     ]);
 
     const csv =

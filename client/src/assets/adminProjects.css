@@ -657,3 +657,200 @@
     width: 100%;
   }
 }
+/* ================= MODAL (GLASS UI) ================= */
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal-content {
+  width: 420px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  border-radius: 18px;
+  padding: 25px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  animation: modalFade 0.25s ease;
+}
+
+@keyframes modalFade {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-content h3 {
+  font-size: 22px;
+  margin-bottom: 15px;
+  color: #1e293b;
+}
+
+/* INPUTS INSIDE MODAL */
+
+.modal-content input,
+.modal-content textarea,
+.modal-content select {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+.modal-content input:focus,
+.modal-content textarea:focus,
+.modal-content select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  outline: none;
+}
+
+/* BUTTONS */
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modal-actions button {
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* SAVE BUTTON */
+.modal-actions button:first-child {
+  background: #6366f1;
+  color: white;
+}
+
+.modal-actions button:first-child:hover {
+  background: #4f46e5;
+}
+
+/* CANCEL BUTTON */
+.modal-actions button:last-child {
+  background: #e5e7eb;
+}
+
+.modal-actions button:last-child:hover {
+  background: #d1d5db;
+}
+
+/* ================= TASK CARD UPGRADE ================= */
+
+.task-card {
+  background: white;
+  border-radius: 14px;
+  padding: 15px;
+  margin-bottom: 12px;
+  border: 1px solid #e5e7eb;
+  transition: 0.2s;
+}
+
+.task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.06);
+}
+
+.task-card h5 {
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+/* STATUS BADGE INSIDE TASK */
+
+.task-card span {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+/* ================= TASK BUTTON FIX ================= */
+
+.task-card button {
+  margin-top: 8px;
+  margin-right: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  background: #6366f1;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  transition: 0.2s;
+}
+
+.task-card button:hover {
+  background: #4f46e5;
+}
+
+/* APPROVE / REJECT COLORS */
+
+.task-card button:nth-child(6) {
+  background: #10b981;
+}
+
+.task-card button:nth-child(6):hover {
+  background: #059669;
+}
+
+.task-card button:nth-child(7) {
+  background: #ef4444;
+}
+
+.task-card button:nth-child(7):hover {
+  background: #dc2626;
+}
+/* FIX: spacing for status + buttons inside task card */
+
+.task-card span {
+  margin-right: 10px; /* space between status and button */
+}
+
+.task-card span {
+  margin-right: 8px; /* just little space */
+}
+
+.task-card button {
+  margin-left: 6px; /* small gap from status */
+  display: inline-block;
+  width: auto; /* prevent full width */
+}
+
+/* Button row alignment */
+.task-card button {
+  margin-right: 8px;
+}
+
+/* OPTIONAL: group buttons nicely */
+.task-card .task-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}

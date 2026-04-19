@@ -14,6 +14,7 @@ const AdminProjects = () => {
 
   const [selectedDept, setSelectedDept] = useState("All");
   const [selectedRole, setSelectedRole] = useState("All");
+  const [editingTask, setEditingTask] = useState(null);
 
   // ✅ NEW SEARCH + FILTER STATE
   const [searchTerm, setSearchTerm] = useState("");
@@ -212,9 +213,18 @@ const AdminProjects = () => {
     }
   };
 
-  const projectEmployees = users.filter((u) =>
-    selectedProject?.members?.some((m) => m.id === u.id),
-  );
+  const projectEmployees = selectedProject?.members || [];
+
+  const updateTask = async () => {
+    try {
+      await api.put(`/tasks/${editingTask.id}`, editingTask);
+      setEditingTask(null);
+      handleViewProject(selectedProject);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update task");
+    }
+  };
 
   /* ================= UI ================= */
 
@@ -463,7 +473,9 @@ const AdminProjects = () => {
                         View Submission
                       </a>
                     )}
-
+                    {t.status !== "Completed" && (
+                      <button onClick={() => setEditingTask(t)}>Edit</button>
+                    )}
                     {t.status === "Submitted" && (
                       <>
                         <button onClick={() => approveTask(t.id)}>
@@ -480,7 +492,6 @@ const AdminProjects = () => {
         )}
 
         {/* ================= PROJECT LIST ================= */}
-
         {!viewMode && !showCreate && (
           <div className="projects-list">
             {filteredProjects.length === 0 ? (
@@ -517,6 +528,83 @@ const AdminProjects = () => {
           </div>
         )}
       </div>
+
+      {/* ✅ ONLY ADDED THIS MODAL */}
+      {editingTask && (
+        <div className="modal">
+          <div className="modal-content">
+            <h3>Edit Task</h3>
+
+            <input
+              value={editingTask.task_name}
+              onChange={(e) =>
+                setEditingTask({
+                  ...editingTask,
+                  task_name: e.target.value,
+                })
+              }
+            />
+
+            <textarea
+              value={editingTask.description}
+              onChange={(e) =>
+                setEditingTask({
+                  ...editingTask,
+                  description: e.target.value,
+                })
+              }
+            />
+
+            <select
+              value={editingTask.employee_username}
+              onChange={(e) =>
+                setEditingTask({
+                  ...editingTask,
+                  employee_username: e.target.value,
+                })
+              }
+            >
+              {projectEmployees.map((emp) => (
+                <option key={emp.id} value={emp.username}>
+                  {emp.username}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={editingTask.priority}
+              onChange={(e) =>
+                setEditingTask({
+                  ...editingTask,
+                  priority: e.target.value,
+                })
+              }
+            >
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+            </select>
+
+            <input
+              type="date"
+              value={
+                editingTask.deadline ? editingTask.deadline.split("T")[0] : ""
+              }
+              onChange={(e) =>
+                setEditingTask({
+                  ...editingTask,
+                  deadline: e.target.value,
+                })
+              }
+            />
+
+            <div className="modal-actions">
+              <button onClick={updateTask}>Save</button>
+              <button onClick={() => setEditingTask(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 };

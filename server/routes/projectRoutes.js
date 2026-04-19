@@ -107,7 +107,7 @@ router.get("/:id", verifyToken, (req, res) => {
   const projectId = req.params.id;
 
   const projectQuery = `
-    SELECT p.*, u.name AS created_by_name
+    SELECT p.*, u.username AS created_by_name
     FROM projects p
     JOIN users u ON p.created_by = u.id
     WHERE p.id = ?
@@ -119,7 +119,7 @@ router.get("/:id", verifyToken, (req, res) => {
       return res.status(404).json({ message: "Not found" });
 
     db.query(
-      `SELECT u.id, u.name FROM project_members pm
+      `SELECT u.id, u.username FROM project_members pm
        JOIN users u ON pm.employee_id = u.id
        WHERE pm.project_id = ?`,
       [projectId],

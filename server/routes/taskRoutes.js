@@ -292,4 +292,37 @@ router.get(
   },
 );
 
+router.put("/:id", verifyToken, (req, res) => {
+  const taskId = req.params.id;
+
+  const { task_name, description, employee_username, priority, deadline } =
+    req.body;
+
+  const formattedDeadline = deadline
+    ? new Date(deadline).toISOString().slice(0, 19).replace("T", " ")
+    : null;
+
+  db.query(
+    `UPDATE tasks 
+     SET task_name=?, description=?, employee_username=?, priority=?, deadline=? 
+     WHERE id=?`,
+    [
+      task_name,
+      description,
+      employee_username,
+      priority,
+      formattedDeadline,
+      taskId,
+    ],
+    (err) => {
+      if (err) {
+        console.error("SQL ERROR:", err);
+        return res.status(500).json({ message: "Update failed" });
+      }
+
+      res.json({ message: "Task updated successfully" });
+    },
+  );
+});
+
 module.exports = router;
