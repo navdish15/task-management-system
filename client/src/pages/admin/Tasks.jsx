@@ -333,8 +333,33 @@ function Tasks() {
                       </span>
                     </td>
 
-                    <td>{task.uploaded_file ? "View" : "No File"}</td>
-                    <td>{task.submitted_file ? "View" : "No Submission"}</td>
+                    <td>
+                      {task.uploaded_file ? (
+                        <a
+                          href={`http://localhost:5000/uploads/${task.uploaded_file}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View File
+                        </a>
+                      ) : (
+                        "No File"
+                      )}
+                    </td>
+
+                    <td>
+                      {task.submitted_file ? (
+                        <a
+                          href={`http://localhost:5000/uploads/${task.submitted_file}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View Submission
+                        </a>
+                      ) : (
+                        "No Submission"
+                      )}
+                    </td>
                     <td>{task.submission_text || "—"}</td>
 
                     <td>

@@ -23,17 +23,44 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
   fileFilter: (req, file, cb) => {
     const allowed = [
+      // Images
       "image/jpeg",
       "image/png",
+      "image/jpg",
+
+      // PDF
       "application/pdf",
+
+      // Word
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+
+      // Excel
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+      // PowerPoint
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+
+      // Text
+      "text/plain",
+
+      // ZIP
+      "application/zip",
+      "application/x-zip-compressed",
     ];
-    if (allowed.includes(file.mimetype)) cb(null, true);
-    else cb(new Error("Invalid file type"), false);
+
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid file type"), false);
+    }
   },
 });
 
@@ -227,28 +254,42 @@ router.post(
   upload.single("file"),
   async (req, res) => {
     try {
+      console.log("========== SUBMIT DEBUG ==========");
+      console.log("USER:", req.user);
+      console.log("FILE:", req.file);
+      console.log("BODY:", req.body);
+
       const taskId = req.params.id;
-      const username = req.user.username;
+
+      const username = req.user.username || req.user.email || req.user.id;
 
       const file = req.file ? req.file.filename : null;
       const text = req.body.text || null;
 
       if (!file && !text) {
-        return res.status(400).json({ message: "No submission" });
+        return res.status(400).json({
+          message: "No submission provided",
+        });
       }
 
       const [result] = await db.query(
-        `UPDATE tasks 
-        SET submitted_file=?, submission_text=?, status='Submitted'
-        WHERE id=? AND employee_username=?`,
+        `UPDATE tasks
+         SET submitted_file = ?,
+             submission_text = ?,
+             status = 'Submitted'
+         WHERE id = ? AND employee_username = ?`,
         [file, text, taskId, username],
       );
 
+      console.log("UPDATE RESULT:", result);
+
       if (result.affectedRows === 0) {
-        return res.status(403).json({ message: "Not allowed" });
+        return res.status(403).json({
+          message: "Not allowed or task not found",
+        });
       }
 
-      /* 🔔 NOTIFY ALL ADMINS */
+      /* 🔔 NOTIFY ADMINS */
       const [admins] = await db.query(
         "SELECT id FROM users WHERE role = 'admin'",
       );
@@ -260,14 +301,20 @@ router.post(
         );
       }
 
-      res.json({ message: "Submitted successfully" });
+      res.json({
+        message: "Submitted successfully",
+      });
     } catch (err) {
-      console.error("Submission error:", err);
-      res.status(500).json({ message: "Server error" });
+      console.error("===== SUBMISSION ERROR =====");
+      console.error(err);
+
+      res.status(500).json({
+        message: err.message,
+        error: err,
+      });
     }
   },
 );
-
 /* ========================================================= */
 /* ================= ADMIN: GET NORMAL TASKS =============== */
 /* ========================================================= */
