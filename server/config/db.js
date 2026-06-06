@@ -4,7 +4,7 @@ const mysql = require("mysql2");
 const pool = mysql.createPool({
   host: "localhost",
   user: "root",
-  password: "root", // 🔁 change if your MySQL password is different
+  password: "root", //
   database: "workflow",
   waitForConnections: true,
   connectionLimit: 10,
@@ -36,8 +36,7 @@ const promisePool = pool.promise();
   }
 })();
 
-// 🔹 Export Both (IMPORTANT for your project structure)
 module.exports = {
-  pool, // For old callback-based code
+  pool,
   promisePool, // For async/await (recommended)
 };

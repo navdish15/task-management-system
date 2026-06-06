@@ -322,6 +322,10 @@ const FloatingChat = ({ currentUser }) => {
               <div className="chatHeader listHeader">Chats</div>
 
               <div className="userList">
+                {projectChats.length > 0 && (
+                  <div className="sectionTitle">Active Projects</div>
+                )}
+
                 {projectChats.map((p) => (
                   <div
                     key={p.chat_id}
@@ -332,6 +336,10 @@ const FloatingChat = ({ currentUser }) => {
                     <span>{p.project_name}</span>
                   </div>
                 ))}
+
+                {users.length > 0 && (
+                  <div className="sectionTitle">Direct Messages</div>
+                )}
 
                 {users.map((u) => (
                   <div
@@ -345,7 +353,6 @@ const FloatingChat = ({ currentUser }) => {
                     <span>{u.name || u.username}</span>
                   </div>
                 ))}
-
                 {users.length === 0 && projectChats.length === 0 && (
                   <div className="emptyState">No chats available</div>
                 )}
@@ -417,7 +424,7 @@ const FloatingChat = ({ currentUser }) => {
                                   {
                                     hour: "2-digit",
                                     minute: "2-digit",
-                                    hour12: false, // 👈 removes AM/PM
+                                    hour12: false,
                                   },
                                 )
                               : ""}
