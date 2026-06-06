@@ -4,10 +4,11 @@ const { pool: db } = require("../config/db");
 const verifyToken = require("../middleware/verifyToken");
 
 /* =====================================================
-   1️⃣ CREATE PROJECT (Admin Only)
+   1️⃣ CREATE PROJECT (Admin Only + Auto Project Chat)
 ===================================================== */
 router.post("/", verifyToken, (req, res) => {
   const { project_name, description, start_date, due_date, members } = req.body;
+
   const adminId = req.user.id;
   const role = req.user.role?.toLowerCase();
 
@@ -23,26 +24,83 @@ router.post("/", verifyToken, (req, res) => {
     return res.status(400).json({ message: "At least one member required" });
   }
 
+  // STEP 1: Create Project
   db.query(
-    `INSERT INTO projects 
+    `INSERT INTO projects
      (project_name, description, start_date, due_date, created_by)
      VALUES (?, ?, ?, ?, ?)`,
     [project_name, description, start_date, due_date, adminId],
-    (err, result) => {
-      if (err) return res.status(500).json({ message: "Insert failed" });
+    (err, projectResult) => {
+      if (err) {
+        console.error("Project creation error:", err);
+        return res.status(500).json({ message: "Project creation failed" });
+      }
 
-      const projectId = result.insertId;
-      const values = members.map((m) => [projectId, m]);
+      const projectId = projectResult.insertId;
+
+      // STEP 2: Assign Project Members
+      const projectMembers = members.map((memberId) => [projectId, memberId]);
 
       db.query(
-        `INSERT INTO project_members (project_id, employee_id) VALUES ?`,
-        [values],
-        () => res.json({ message: "Project created", projectId }),
+        `INSERT INTO project_members (project_id, employee_id)
+         VALUES ?`,
+        [projectMembers],
+        (err) => {
+          if (err) {
+            console.error("Project member error:", err);
+            return res
+              .status(500)
+              .json({ message: "Member assignment failed" });
+          }
+
+          // STEP 3: Create Project Chat
+          db.query(
+            `INSERT INTO chats (type, project_id)
+             VALUES ('project', ?)`,
+            [projectId],
+            (err, chatResult) => {
+              if (err) {
+                console.error("Chat creation error:", err);
+                return res
+                  .status(500)
+                  .json({ message: "Project chat creation failed" });
+              }
+
+              const chatId = chatResult.insertId;
+
+              // STEP 4: Add Admin + Members to Chat
+              const chatMembers = [
+                [chatId, adminId],
+                ...members.map((memberId) => [chatId, memberId]),
+              ];
+
+              db.query(
+                `INSERT INTO chat_members (chat_id, user_id)
+                 VALUES ?`,
+                [chatMembers],
+                (err) => {
+                  if (err) {
+                    console.error("Chat member error:", err);
+                    return res.status(500).json({
+                      message: "Chat member assignment failed",
+                    });
+                  }
+
+                  // SUCCESS
+                  res.status(201).json({
+                    message: "Project and chat created successfully",
+                    projectId,
+                    chatId,
+                  });
+                },
+              );
+            },
+          );
+        },
       );
     },
   );
 });
-
 /* =====================================================
    2️⃣ GET ALL PROJECTS (FIXED 🔥)
 ===================================================== */
