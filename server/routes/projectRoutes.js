@@ -6,7 +6,7 @@ const verifyToken = require("../middleware/verifyToken");
 /* =====================================================
    1️⃣ CREATE PROJECT (Admin Only)
 ===================================================== */
-router.post("/create", verifyToken, (req, res) => {
+router.post("/", verifyToken, (req, res) => {
   const { project_name, description, start_date, due_date, members } = req.body;
   const adminId = req.user.id;
   const role = req.user.role?.toLowerCase();

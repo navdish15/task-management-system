@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { pool: db } = require("../config/db");
+const { promisePool: db } = require("../config/db");
 const verifyToken = require("../middleware/verifyToken");
 const authorizeRoles = require("../middleware/roleMiddleware");
 const multer = require("multer");
@@ -59,18 +59,16 @@ router.post(
 
       const file = req.file ? req.file.filename : null;
 
-      if (!project_id) {
-        return res.status(400).json({ message: "Project ID is required" });
-      }
+      // Normal tasks can have project_id = null
+      const finalProjectId = project_id || null;
 
       if (!employee_username || !task_name) {
         return res.status(400).json({ message: "Missing fields" });
       }
-
       await db.query(
-        `INSERT INTO tasks 
-        (employee_username, task_name, description, deadline, priority, status, uploaded_file, project_id)
-        VALUES (?, ?, ?, ?, ?, 'Pending', ?, ?)`,
+        `INSERT INTO tasks
+  (employee_username, task_name, description, deadline, priority, status, uploaded_file, project_id)
+  VALUES (?, ?, ?, ?, ?, 'Pending', ?, ?)`,
         [
           employee_username,
           task_name,
@@ -78,7 +76,7 @@ router.post(
           deadline,
           priority,
           file,
-          project_id,
+          finalProjectId,
         ],
       );
 
@@ -278,21 +276,21 @@ router.get(
   "/admin/all-normal-tasks",
   verifyToken,
   authorizeRoles("admin"),
-  (req, res) => {
-    db.query(
-      "SELECT * FROM tasks WHERE project_id IS NULL ORDER BY deadline ASC",
-      (err, result) => {
-        if (err) {
-          console.error("Fetch normal tasks error:", err);
-          return res.status(500).json({ message: "Server error" });
-        }
-        res.json(result);
-      },
-    );
+  async (req, res) => {
+    try {
+      const [result] = await db.query(
+        "SELECT * FROM tasks WHERE project_id IS NULL ORDER BY deadline ASC",
+      );
+
+      res.json(result);
+    } catch (err) {
+      console.error("Fetch normal tasks error:", err);
+      res.status(500).json({ message: "Server error" });
+    }
   },
 );
 
-router.put("/:id", verifyToken, (req, res) => {
+router.put("/:id", verifyToken, async (req, res) => {
   const taskId = req.params.id;
 
   const { task_name, description, employee_username, priority, deadline } =
@@ -302,27 +300,47 @@ router.put("/:id", verifyToken, (req, res) => {
     ? new Date(deadline).toISOString().slice(0, 19).replace("T", " ")
     : null;
 
-  db.query(
-    `UPDATE tasks 
-     SET task_name=?, description=?, employee_username=?, priority=?, deadline=? 
-     WHERE id=?`,
-    [
-      task_name,
-      description,
-      employee_username,
-      priority,
-      formattedDeadline,
-      taskId,
-    ],
-    (err) => {
-      if (err) {
-        console.error("SQL ERROR:", err);
-        return res.status(500).json({ message: "Update failed" });
-      }
+  try {
+    await db.query(
+      `UPDATE tasks
+       SET task_name=?, description=?, employee_username=?, priority=?, deadline=?
+       WHERE id=?`,
+      [
+        task_name,
+        description,
+        employee_username,
+        priority,
+        formattedDeadline,
+        taskId,
+      ],
+    );
 
-      res.json({ message: "Task updated successfully" });
-    },
-  );
+    res.json({ message: "Task updated successfully" });
+  } catch (err) {
+    console.error("SQL ERROR:", err);
+    res.status(500).json({ message: "Update failed" });
+  }
+});
+
+/* ========================================================= */
+/* ================= ADMIN: DELETE TASK ==================== */
+/* ========================================================= */
+
+router.delete("/:id", verifyToken, async (req, res) => {
+  try {
+    const taskId = req.params.id;
+
+    const [result] = await db.query("DELETE FROM tasks WHERE id = ?", [taskId]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    res.json({ message: "Task deleted successfully" });
+  } catch (err) {
+    console.error("Delete task error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 module.exports = router;

@@ -1,5 +1,4 @@
-const { pool: db } = require("../config/db");
-
+const { promisePool: db } = require("../config/db");
 /**
  * Create notification in DB
  * @param {number} userId
